@@ -187,7 +187,7 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 	a.emitLog("info", fmt.Sprintf("Executing: %s %s", filepath.Base(binPath), strings.Join(args, " ")))
 	
 	cmd := exec.Command(binPath, args...)
-	
+	hideConsoleWindow(cmd)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to create stdout pipe: %v", err))
