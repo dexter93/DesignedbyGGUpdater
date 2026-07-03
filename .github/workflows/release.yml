@@ -20,19 +20,13 @@ jobs:
             platform: linux/amd64
             build_flags: -tags webkit2_41
             artifact_name: DesignedbyGGUpdater-linux-amd64
-            
+
           - name: Windows
             os: windows-latest
             platform: windows/amd64
             build_flags: ""
             artifact_name: DesignedbyGGUpdater-windows-amd64.exe
-            
-          - name: macOS (Intel)
-            os: macos-latest
-            platform: darwin/amd64
-            build_flags: ""
-            artifact_name: DesignedbyGGUpdater-darwin-amd64
-            
+
           - name: macOS (Apple Silicon)
             os: macos-latest
             platform: darwin/arm64
@@ -103,12 +97,6 @@ jobs:
         run: |
           cd build/bin
           Compress-Archive -Path ${{ env.APP_NAME }}.exe -DestinationPath ../${{ matrix.artifact_name }}.zip
-
-      - name: Package macOS binary (Intel)
-        if: matrix.os == 'macos-latest' && matrix.platform == 'darwin/amd64'
-        run: |
-          cd build/bin
-          zip -r ../${{ matrix.artifact_name }}.zip ${{ env.APP_NAME }}.app
 
       - name: Package macOS binary (Apple Silicon)
         if: matrix.os == 'macos-latest' && matrix.platform == 'darwin/arm64'
