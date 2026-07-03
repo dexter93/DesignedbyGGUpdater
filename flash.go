@@ -176,7 +176,7 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 	}
 	
 	if !device.IsBootloader {
-		args = append(args, "--reboot", "hfd")
+		args = append(args, "--reboot", "sonix")
 		a.emitLog("warn", "Device in application mode, will reboot to bootloader...")
 	}
 	
