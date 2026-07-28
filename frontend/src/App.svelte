@@ -577,6 +577,7 @@
         <div>
           <p class="font-semibold mb-1">Built With</p>
           <div class="flex gap-2 flex-wrap text-xs">
+            <button on:click={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC')} class="badge badge-outline badge-sm link link-hover">SonixFlasher</button>
             <button on:click={() => BrowserOpenURL('https://wails.io')} class="badge badge-outline badge-sm link link-hover">Wails v2</button>
             <button on:click={() => BrowserOpenURL('https://go.dev')} class="badge badge-outline badge-sm link link-hover">Go</button>
             <button on:click={() => BrowserOpenURL('https://svelte.dev')} class="badge badge-outline badge-sm link link-hover">Svelte</button>
@@ -588,13 +589,13 @@
             <p class="font-semibold mb-1">Links</p>
             <div class="space-y-1 text-xs">
               <div>
-                <button on:click={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC')} class="link link-hover">GitHub Repository</button>
+                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater')} class="link link-hover">GitHub Repository</button>
               </div>
               <div>
-                <button on:click={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC/issues')} class="link link-hover">Report an Issue</button>
+                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/issues')} class="link link-hover">Report an Issue</button>
               </div>
               <div>
-                <button on:click={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC/blob/main/LICENSE')} class="link link-hover">View License</button>
+                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/blob/master/LICENSE')} class="link link-hover">View License</button>
               </div>
             </div>
           </div>
