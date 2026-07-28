@@ -23,6 +23,9 @@
   let countdown = 15
   let countdownInterval = null
   let confirmationRequired = ''
+  let showModelSelectModal = false
+  let modelCandidates = []
+  let selectedModelIndex = null
 
   const availableKeyboards = [
     { name: 'BSK01', description: 'DesignedbyGG Berserker', firmware: 'firmware/BSK01.bin' },
@@ -55,10 +58,20 @@
     selectedKeyboardModel = ''
     errorMsg = ''
     showUdevWarning = false
-    
+    modelCandidates = []
+    selectedModelIndex = null
+
     try {
       device = await DetectDevice()
       
+      // Check if we have ambiguous device candidates
+      if (device.candidates) {
+        modelCandidates = JSON.parse(device.candidates)
+        showModelSelectModal = true
+        state = 'model-select'
+        return
+      }
+
       // Extract model name FIRST (before loading image)
       if (!device.isBootloader && device.firmwarePath) {
         const match = device.firmwarePath.match(/([A-Z0-9]+)\.bin$/i)
@@ -82,6 +95,29 @@
         errorMsg = err?.message || 'No device detected'
       }
     }
+  }
+
+  async function confirmModelSelection() {
+      if (selectedModelIndex === null) return
+
+      const model = modelCandidates[selectedModelIndex]
+
+      if (!model.firmwarePath) {
+        showModelSelectModal = false
+        state = 'error'
+        errorMsg = 'This keyboard model is currently not supported!'
+        return
+      }
+
+      device.firmwarePath = model.firmwarePath
+      device.name = model.description
+      selectedKeyboardModel = model.name
+      device.candidates = ''
+      
+      showModelSelectModal = false
+      
+      keyboardImage = await GetKeyboardImage(device)
+      state = 'ready'
   }
 
   async function selectKeyboard(keyboard) {
@@ -605,6 +641,77 @@
 
       <div class="modal-action">
         <button class="btn btn-sm" on:click={() => showLogsModal = false}>Close</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showModelSelectModal}
+  <div class="modal modal-open">
+    <div class="modal-box bg-white max-w-4xl">
+      <h3 class="font-light text-xl mb-4 text-neutral-800">Select Your Keyboard Model</h3>
+      
+      <p class="text-sm text-neutral-600 mb-6">
+        Multiple keyboard models share the same hardware revision. Please select your model:
+      </p>
+
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        {#each modelCandidates as model, index}
+          <button 
+            class="card border-2 transition-all overflow-hidden {selectedModelIndex === index ? 'border-neutral-800 bg-neutral-50' : 'border-neutral-200 hover:border-neutral-400'}"
+            on:click={() => selectedModelIndex = index}
+          >
+            <div class="card-body p-0">
+              <div class="w-full h-56 bg-neutral-100">
+                {#if model.firmwarePath}
+                  {#await GetKeyboardImage({...device, firmwarePath: model.firmwarePath})}
+                    <div class="w-full h-full flex items-center justify-center">
+                      <span class="loading loading-spinner loading-md text-neutral-400"></span>
+                    </div>
+                  {:then imageData}
+                    <img src={imageData} alt={model.description} class="w-full h-full object-cover" />
+                  {/await}
+                {:else}
+                  {#await GetKeyboardImage({...device, firmwarePath: '', name: model.description})}
+                    <div class="w-full h-full flex items-center justify-center">
+                      <span class="loading loading-spinner loading-md text-neutral-400"></span>
+                    </div>
+                  {:then imageData}
+                    {#if imageData}
+                      <img src={imageData} alt={model.description} class="w-full h-full object-cover" />
+                    {:else}
+                      <div class="w-full h-full flex items-center justify-center text-neutral-300 bg-neutral-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    {/if}
+                  {/await}
+                {/if}
+              </div>
+              <div class="text-left p-4">
+                <div class="font-bold text-neutral-800 mb-1">{model.name}</div>
+                <div class="text-xs text-neutral-600 mb-2">{model.description}</div>
+                {#if !model.firmwarePath}
+                  <div class="badge badge-warning badge-sm">Coming Soon</div>
+                {/if}
+              </div>
+            </div>
+          </button>
+        {/each}
+      </div>
+
+      <div class="modal-action">
+        <button class="btn btn-ghost" on:click={() => { showModelSelectModal = false; state = 'idle'; device = null; selectedModelIndex = null; }}>
+          Cancel
+        </button>
+        <button 
+          class="btn btn-neutral" 
+          on:click={confirmModelSelection}
+          disabled={selectedModelIndex === null}
+        >
+          Confirm Selection
+        </button>
       </div>
     </div>
   </div>

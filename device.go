@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
-
+	"encoding/json"
 	"github.com/sstallion/go-hid"
 )
 
@@ -22,15 +22,16 @@ type Device struct {
 	Path         string `json:"path"`
 	IsBootloader bool   `json:"isBootloader"`
 	FirmwarePath string `json:"firmwarePath"`
+	Candidates   string `json:"candidates,omitempty"`
 }
 
 type AppModeDevice struct {
-	Name          string
-	Description   string
-	FirmwarePath  string
-	BootloaderVID uint16
-	BootloaderPID uint16
-	BcdDevice     uint16
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	FirmwarePath  string `json:"firmwarePath"`
+	BootloaderVID uint16 `json:"bootloaderVID"`
+	BootloaderPID uint16 `json:"bootloaderPID"`
+	BcdDevice     uint16 `json:"bcdDevice"`
 }
 
 var knownBootloaderPIDs = map[uint16]string{
@@ -60,6 +61,15 @@ var knownAppModePIDs = map[uint16][]AppModeDevice{
 			BootloaderPID: 0x7040,
 			BcdDevice:     0x0108,
 		},
+		{
+			Name:          "CSB01",
+			Description:   "DesignedbyGG Champions Bane",
+			FirmwarePath:  "",
+			BootloaderVID: SONIX_VID,
+			BootloaderPID: 0x7040,
+			BcdDevice:     0x0108,
+		},
+
 	},
 	0x511E: {
 		{
@@ -133,21 +143,34 @@ func (a *App) DetectDevice() (*Device, error) {
 		// Check for application mode
 		if info.VendorID == DESIGNEDBYGG_VID {
 			if appDevices, ok := knownAppModePIDs[info.ProductID]; ok {
-				var matchedDevice *AppModeDevice
+				var matchedDevices []AppModeDevice
 				for i := range appDevices {
 					if appDevices[i].BcdDevice == info.ReleaseNbr {
-						matchedDevice = &appDevices[i]
-						break
+						matchedDevices = append(matchedDevices, appDevices[i])
 					}
 				}
 
-				if matchedDevice != nil {
+				if len(matchedDevices) > 0 {
+					var matchedDevice *AppModeDevice
+					var candidatesJSON string
+					
+					if len(matchedDevices) > 1 {
+						// Multiple devices with same bcdDevice - needs disambiguation
+						matchedDevice = &matchedDevices[0]
+						candidatesData, _ := json.Marshal(matchedDevices)
+						candidatesJSON = string(candidatesData)
+					} else {
+						matchedDevice = &matchedDevices[0]
+					}
+
 					seenDevices[deviceKey] = true
 					
-					firmwareExists := false
-					_, err := binaries.ReadFile(matchedDevice.FirmwarePath)
-					if err == nil {
-						firmwareExists = true
+					firmwareExists := matchedDevice.FirmwarePath != ""
+					if firmwareExists {
+						_, err := binaries.ReadFile(matchedDevice.FirmwarePath)
+						if err != nil {
+							firmwareExists = false
+						}
 					}
 
 					device := &Device{
@@ -160,8 +183,13 @@ func (a *App) DetectDevice() (*Device, error) {
 						Path:         info.Path,
 						IsBootloader: false,
 						FirmwarePath: matchedDevice.FirmwarePath,
+						Candidates:   candidatesJSON,
 					}
 					detectedDevices = append(detectedDevices, device)
+					
+					if len(matchedDevices) > 1 {
+						a.emitLog("warn", "⚠ Multiple models detected - disambiguation required")
+					}
 					
 					a.emitLog("success", fmt.Sprintf("✓ Found in APPLICATION mode: %s", matchedDevice.Description))
 					a.emitLog("info", fmt.Sprintf("  VID: 0x%s | PID: 0x%s | bcdDevice: %d.%02d", 
@@ -171,7 +199,7 @@ func (a *App) DetectDevice() (*Device, error) {
 					if firmwareExists {
 						a.emitLog("success", fmt.Sprintf("  ✓ Embedded firmware: %s", matchedDevice.FirmwarePath))
 					} else {
-						a.emitLog("warn", fmt.Sprintf("  ✗ Firmware missing: %s", matchedDevice.FirmwarePath))
+						a.emitLog("warn", fmt.Sprintf("  ✗ Firmware not available"))
 					}
 					a.emitLog("warn", "  Note: Requires --reboot to enter bootloader mode")
 					
@@ -237,32 +265,59 @@ func (a *App) DetectDevice() (*Device, error) {
 
 func (a *App) GetKeyboardImage(device *Device) string {
 	if device == nil {
+		a.emitLog("warn", "GetKeyboardImage: device is nil")
 		return ""
 	}
 
-	var imagePath string
+	var modelName string
 	
+	// Extract model name from FirmwarePath
 	if device.FirmwarePath != "" {
-		if strings.Contains(device.FirmwarePath, "BSK01") {
-			imagePath = "images/BSK01.jpg"
-		} else if strings.Contains(device.FirmwarePath, "ICL01") {
-			imagePath = "images/ICL01.jpg"
-		} else if strings.Contains(device.FirmwarePath, "ICL03") {
-			imagePath = "images/ICL03.jpg"
-		} else if strings.Contains(device.FirmwarePath, "RB01") {
-			imagePath = "images/RB01.jpg"
+		parts := strings.Split(device.FirmwarePath, "/")
+		if len(parts) > 0 {
+			fileName := parts[len(parts)-1]
+			modelName = strings.TrimSuffix(fileName, ".bin")
+			a.emitLog("info", fmt.Sprintf("GetKeyboardImage: Extracted model '%s' from firmware path '%s'", modelName, device.FirmwarePath))
 		}
 	}
-
-	if imagePath == "" {
-		imagePath = "images/default.jpg"
+	
+	// If no firmware path, parse candidates JSON to find model name
+	if modelName == "" && device.Candidates != "" {
+		a.emitLog("info", fmt.Sprintf("GetKeyboardImage: No firmware path, checking candidates for device '%s'", device.Name))
+		var candidates []AppModeDevice
+		if err := json.Unmarshal([]byte(device.Candidates), &candidates); err == nil {
+			a.emitLog("info", fmt.Sprintf("GetKeyboardImage: Found %d candidates", len(candidates)))
+			// Find the candidate that matches the device name
+			for _, candidate := range candidates {
+				a.emitLog("info", fmt.Sprintf("  Candidate: %s (%s) - fw: '%s'", candidate.Name, candidate.Description, candidate.FirmwarePath))
+				if candidate.Description == device.Name {
+					modelName = candidate.Name
+					a.emitLog("success", fmt.Sprintf("GetKeyboardImage: Matched device name to candidate '%s'", modelName))
+					break
+				}
+			}
+		} else {
+			a.emitLog("error", fmt.Sprintf("GetKeyboardImage: Failed to parse candidates JSON: %v", err))
+		}
 	}
-
+	
+	// If still empty, return empty
+	if modelName == "" {
+		a.emitLog("warn", "GetKeyboardImage: Could not determine model name")
+		return ""
+	}
+	
+	// Map model name to image path
+	imagePath := fmt.Sprintf("images/%s.jpg", modelName)
+	a.emitLog("info", fmt.Sprintf("GetKeyboardImage: Loading image from '%s'", imagePath))
+	
 	data, err := binaries.ReadFile(imagePath)
 	if err != nil {
+		a.emitLog("error", fmt.Sprintf("GetKeyboardImage: Failed to read image '%s': %v", imagePath, err))
 		return ""
 	}
 
+	a.emitLog("success", fmt.Sprintf("GetKeyboardImage: Successfully loaded image for '%s'", modelName))
 	encoded := base64.StdEncoding.EncodeToString(data)
 	return fmt.Sprintf("data:image/jpeg;base64,%s", encoded)
 }
