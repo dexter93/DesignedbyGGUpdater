@@ -1,5 +1,5 @@
 <script>
-  import { DetectDevice, FlashFirmware, CheckUdevRules, GetUdevRulesContent, GetKeyboardImage, GetAppIcon, SelectFirmware } from '../wailsjs/go/main/App'
+  import { DetectDevice, FlashFirmware, CheckUdevRules, GetUdevRulesContent, GetKeyboardImage, GetAppIcon, SelectFirmware, GetAvailableKeyboards } from '../wailsjs/go/main/App'
   import { EventsOn } from '../wailsjs/runtime/runtime'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { onMount } from 'svelte'
@@ -26,13 +26,7 @@
   let showModelSelectModal = false
   let modelCandidates = []
   let selectedModelIndex = null
-
-  const availableKeyboards = [
-    { name: 'BSK01', description: 'DesignedbyGG Berserker', firmware: 'firmware/BSK01.bin' },
-    { name: 'ICL01', description: 'DesignedbyGG Ironclad v1', firmware: 'firmware/ICL01.bin' },
-    { name: 'ICL03', description: 'DesignedbyGG Ironclad v3', firmware: 'firmware/ICL03.bin' },
-    { name: 'RB01', description: 'DesignedbyGG RedBladeFS', firmware: 'firmware/RB01.bin' },
-  ]
+  let availableKeyboards = []
 
   $: canFlash = state === 'ready' && device && !showUdevWarning && (device.isBootloader ? selectedFirmware : device.firmwarePath)
   $: confirmationMatch = confirmationText.trim() === confirmationRequired
@@ -42,6 +36,7 @@
     logs = []
     isLinux = navigator.platform.toLowerCase().includes('linux')
     appIcon = await GetAppIcon()
+    availableKeyboards = await GetAvailableKeyboards()
   })
 
   async function copyUdevRules() {
@@ -121,15 +116,22 @@
   }
 
   async function selectKeyboard(keyboard) {
-    selectedFirmware = keyboard.firmware
+
+    if (!keyboard.firmwarePath) {
+      showKeyboardSelectModal = false
+      state = 'error'
+      errorMsg = 'This keyboard model is currently not supported!'
+      return
+    }
+
+    selectedFirmware = keyboard.firmwarePath
     selectedKeyboardModel = keyboard.name
     isCustomFirmware = false
     showKeyboardSelectModal = false
     
-    // Update image by passing device with the selected firmware path
     keyboardImage = await GetKeyboardImage({
       ...device,
-      firmwarePath: keyboard.firmware
+      firmwarePath: keyboard.firmwarePath
     })
   }
 

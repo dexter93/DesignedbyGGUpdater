@@ -10,6 +10,8 @@ export function FlashFirmware(arg1:main.Device,arg2:string,arg3:number):Promise<
 
 export function GetAppIcon():Promise<string>;
 
+export function GetAvailableKeyboards():Promise<Array<main.AppModeDevice>>;
+
 export function GetEmbeddedFirmware(arg1:string):Promise<string>;
 
 export function GetKeyboardImage(arg1:main.Device):Promise<string>;

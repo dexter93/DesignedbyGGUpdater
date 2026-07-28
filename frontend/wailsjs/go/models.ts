@@ -1,5 +1,27 @@
 export namespace main {
 	
+	export class AppModeDevice {
+	    name: string;
+	    description: string;
+	    firmwarePath: string;
+	    bootloaderVID: number;
+	    bootloaderPID: number;
+	    bcdDevice: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppModeDevice(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.firmwarePath = source["firmwarePath"];
+	        this.bootloaderVID = source["bootloaderVID"];
+	        this.bootloaderPID = source["bootloaderPID"];
+	        this.bcdDevice = source["bcdDevice"];
+	    }
+	}
 	export class Device {
 	    vid: string;
 	    pid: string;

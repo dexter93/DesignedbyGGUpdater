@@ -18,6 +18,10 @@ export function GetAppIcon() {
   return window['go']['main']['App']['GetAppIcon']();
 }
 
+export function GetAvailableKeyboards() {
+  return window['go']['main']['App']['GetAvailableKeyboards']();
+}
+
 export function GetEmbeddedFirmware(arg1) {
   return window['go']['main']['App']['GetEmbeddedFirmware'](arg1);
 }

@@ -265,61 +265,70 @@ func (a *App) DetectDevice() (*Device, error) {
 
 func (a *App) GetKeyboardImage(device *Device) string {
 	if device == nil {
-		a.emitLog("warn", "GetKeyboardImage: device is nil")
+		a.emitLog("warn", "device is nil")
 		return ""
 	}
 
 	var modelName string
-	
+
 	// Extract model name from FirmwarePath
 	if device.FirmwarePath != "" {
 		parts := strings.Split(device.FirmwarePath, "/")
 		if len(parts) > 0 {
 			fileName := parts[len(parts)-1]
 			modelName = strings.TrimSuffix(fileName, ".bin")
-			a.emitLog("info", fmt.Sprintf("GetKeyboardImage: Extracted model '%s' from firmware path '%s'", modelName, device.FirmwarePath))
 		}
 	}
-	
+
 	// If no firmware path, parse candidates JSON to find model name
 	if modelName == "" && device.Candidates != "" {
-		a.emitLog("info", fmt.Sprintf("GetKeyboardImage: No firmware path, checking candidates for device '%s'", device.Name))
+		a.emitLog("info", fmt.Sprintf("No firmware path, checking candidates for device '%s'", device.Name))
 		var candidates []AppModeDevice
 		if err := json.Unmarshal([]byte(device.Candidates), &candidates); err == nil {
-			a.emitLog("info", fmt.Sprintf("GetKeyboardImage: Found %d candidates", len(candidates)))
+			a.emitLog("info", fmt.Sprintf("Found %d candidates", len(candidates)))
 			// Find the candidate that matches the device name
 			for _, candidate := range candidates {
 				a.emitLog("info", fmt.Sprintf("  Candidate: %s (%s) - fw: '%s'", candidate.Name, candidate.Description, candidate.FirmwarePath))
 				if candidate.Description == device.Name {
 					modelName = candidate.Name
-					a.emitLog("success", fmt.Sprintf("GetKeyboardImage: Matched device name to candidate '%s'", modelName))
+					a.emitLog("success", fmt.Sprintf("Matched device name to candidate '%s'", modelName))
 					break
 				}
 			}
 		} else {
-			a.emitLog("error", fmt.Sprintf("GetKeyboardImage: Failed to parse candidates JSON: %v", err))
+			a.emitLog("error", fmt.Sprintf("Failed to parse candidates JSON: %v", err))
 		}
 	}
-	
+
 	// If still empty, return empty
 	if modelName == "" {
-		a.emitLog("warn", "GetKeyboardImage: Could not determine model name")
-		return ""
-	}
-	
-	// Map model name to image path
-	imagePath := fmt.Sprintf("images/%s.jpg", modelName)
-	a.emitLog("info", fmt.Sprintf("GetKeyboardImage: Loading image from '%s'", imagePath))
-	
-	data, err := binaries.ReadFile(imagePath)
-	if err != nil {
-		a.emitLog("error", fmt.Sprintf("GetKeyboardImage: Failed to read image '%s': %v", imagePath, err))
+		a.emitLog("warn", "Could not determine model name")
 		return ""
 	}
 
-	a.emitLog("success", fmt.Sprintf("GetKeyboardImage: Successfully loaded image for '%s'", modelName))
+	// Map model name to image path
+	imagePath := fmt.Sprintf("images/%s.jpg", modelName)
+
+	data, err := binaries.ReadFile(imagePath)
+	if err != nil {
+		a.emitLog("error", fmt.Sprintf("Failed to read image '%s': %v", imagePath, err))
+		return ""
+	}
+
 	encoded := base64.StdEncoding.EncodeToString(data)
 	return fmt.Sprintf("data:image/jpeg;base64,%s", encoded)
+}
+
+func (a *App) GetAvailableKeyboards() []AppModeDevice {
+	var keyboards []AppModeDevice
+
+	for _, devices := range knownAppModePIDs {
+		for _, device := range devices {
+			keyboards = append(keyboards, device)
+		}
+	}
+
+	return keyboards
 }
 
 func (a *App) GetAppIcon() string {
