@@ -27,11 +27,11 @@ jobs:
             build_flags: ""
             artifact_name: DesignedbyGGUpdater-windows-amd64.exe
 
-          - name: macOS (Apple Silicon)
-            os: macos-latest
-            platform: darwin/arm64
-            build_flags: ""
-            artifact_name: DesignedbyGGUpdater-darwin-arm64
+        #  - name: macOS (Apple Silicon)
+        #    os: macos-latest
+        #    platform: darwin/arm64
+        #    build_flags: ""
+        #    artifact_name: DesignedbyGGUpdater-darwin-arm64
 
     runs-on: ${{ matrix.os }}
     name: Build ${{ matrix.name }}
