@@ -164,7 +164,7 @@
   function openConfirmModal() {
     if (!canFlash) return
     
-    confirmationRequired = isCustomFirmware ? "I know what I'm doing, I'm on my own" : selectedKeyboardModel
+    confirmationRequired = isCustomFirmware ? "Je suis une baguette" : selectedKeyboardModel
     confirmationText = ''
     showConfirmModal = true
     startCountdown()
