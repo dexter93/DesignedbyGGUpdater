@@ -55,7 +55,7 @@ var knownAppModePIDs = map[uint16][]AppModeDevice{
 		},
 		{
 			Name:          "ICL01",
-			Description:   "DesignedbyGG Ironclad v1",
+			Description:   "DesignedbyGG Ironclad v1, v2, v2.1",
 			FirmwarePath:  "firmware/ICL01.bin",
 			BootloaderVID: SONIX_VID,
 			BootloaderPID: 0x7040,
