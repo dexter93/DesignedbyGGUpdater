@@ -22,6 +22,10 @@ export function GetAvailableKeyboards() {
   return window['go']['main']['App']['GetAvailableKeyboards']();
 }
 
+export function GetAvailableLanguages() {
+  return window['go']['main']['App']['GetAvailableLanguages']();
+}
+
 export function GetEmbeddedFirmware(arg1) {
   return window['go']['main']['App']['GetEmbeddedFirmware'](arg1);
 }
@@ -32,6 +36,10 @@ export function GetKeyboardImage(arg1) {
 
 export function GetSonixFlasherPath() {
   return window['go']['main']['App']['GetSonixFlasherPath']();
+}
+
+export function GetTranslations(arg1) {
+  return window['go']['main']['App']['GetTranslations'](arg1);
 }
 
 export function GetUdevRulesContent() {

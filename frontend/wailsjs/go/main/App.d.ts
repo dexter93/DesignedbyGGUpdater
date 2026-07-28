@@ -12,11 +12,15 @@ export function GetAppIcon():Promise<string>;
 
 export function GetAvailableKeyboards():Promise<Array<main.AppModeDevice>>;
 
+export function GetAvailableLanguages():Promise<Array<Record<string, string>>>;
+
 export function GetEmbeddedFirmware(arg1:string):Promise<string>;
 
 export function GetKeyboardImage(arg1:main.Device):Promise<string>;
 
 export function GetSonixFlasherPath():Promise<string>;
+
+export function GetTranslations(arg1:string):Promise<main.Translation>;
 
 export function GetUdevRulesContent():Promise<string>;
 

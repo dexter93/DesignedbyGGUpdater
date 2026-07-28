@@ -1,9 +1,12 @@
 <script>
-  import { DetectDevice, FlashFirmware, CheckUdevRules, GetUdevRulesContent, GetKeyboardImage, GetAppIcon, SelectFirmware, GetAvailableKeyboards } from '../wailsjs/go/main/App'
+  import { DetectDevice, FlashFirmware, CheckUdevRules, GetUdevRulesContent, GetKeyboardImage, GetAppIcon, SelectFirmware, GetAvailableKeyboards, GetTranslations, GetAvailableLanguages } from '../wailsjs/go/main/App'
   import { EventsOn } from '../wailsjs/runtime/runtime'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { onMount } from 'svelte'
 
+  let currentLang = 'en'
+  let t = {}
+  let availableLanguages = []
   let state = 'idle'
   let device = null
   let keyboardImage = ''
@@ -37,7 +40,14 @@
     isLinux = navigator.platform.toLowerCase().includes('linux')
     appIcon = await GetAppIcon()
     availableKeyboards = await GetAvailableKeyboards()
+    availableLanguages = await GetAvailableLanguages()
+    t = await GetTranslations(currentLang)
   })
+
+  async function switchLanguage(lang) {
+    currentLang = lang
+    t = await GetTranslations(lang)
+  }
 
   async function copyUdevRules() {
     const rules = await GetUdevRulesContent()
@@ -81,13 +91,13 @@
       
     } catch (err) {
       state = 'error'
-      if (err && err.message && (err.message.includes('Permission denied') || err.message.includes('access'))) {
-        errorMsg = 'USB Permission Error: Please install udev rules'
+      if (err && err.message && (err.message.includes('Permission denied') || err.message.includes('access') || err.message.includes(t.PermissionDenied))) {
+        errorMsg = t.USBPermissionError
         if (isLinux) {
           showUdevWarning = true
         }
       } else {
-        errorMsg = err?.message || 'No device detected'
+        errorMsg = err?.message || t.NoDeviceDetected
       }
     }
   }
@@ -100,7 +110,7 @@
       if (!model.firmwarePath) {
         showModelSelectModal = false
         state = 'error'
-        errorMsg = 'This keyboard model is currently not supported!'
+        errorMsg = t.NotCurrentlySupported
         return
       }
 
@@ -116,11 +126,10 @@
   }
 
   async function selectKeyboard(keyboard) {
-
     if (!keyboard.firmwarePath) {
       showKeyboardSelectModal = false
       state = 'error'
-      errorMsg = 'This keyboard model is currently not supported!'
+      errorMsg = t.NotCurrentlySupported
       return
     }
 
@@ -164,7 +173,7 @@
   function openConfirmModal() {
     if (!canFlash) return
     
-    confirmationRequired = isCustomFirmware ? "Je suis une baguette" : selectedKeyboardModel
+    confirmationRequired = isCustomFirmware ? t.CustomFirmwareConfirm : selectedKeyboardModel
     confirmationText = ''
     showConfirmModal = true
     startCountdown()
@@ -199,7 +208,7 @@
       
       if (result && result.message === 'USB_PERMISSION_ERROR') {
         state = 'ready'
-        errorMsg = 'USB Permission Error - Udev rules required'
+        errorMsg = t.UdevRulesRequired
         if (isLinux) {
           showUdevWarning = true
         }
@@ -210,11 +219,11 @@
         state = 'success'
       } else {
         state = 'error'
-        errorMsg = result?.message || 'Flash operation failed'
+        errorMsg = result?.message || t.FlashOperationFailed
       }
     } catch (err) {
       state = 'error'
-      errorMsg = err?.message || 'Flash failed - check logs for details'
+      errorMsg = err?.message || t.CheckLogsForDetails
     }
   }
   
@@ -247,18 +256,31 @@
 <div class="h-screen flex items-center justify-center bg-neutral-50" data-theme="light">
   <div class="w-full max-w-5xl px-6">
     <!-- Main Card -->
-    <div class="card bg-white shadow-xl border border-neutral-200">
+    <div class="card bg-white shadow-xl border border-neutral-200 relative">
       <div class="card-body p-6">
         
         {#if !device && state === 'idle'}
+          <!-- Language Toggle - Top Right -->
+          <div class="absolute top-4 right-4 flex gap-2">
+            {#each availableLanguages as lang}
+              <button 
+                class="btn btn-sm {currentLang === lang.code ? 'btn-neutral' : 'btn-ghost'}"
+                on:click={() => switchLanguage(lang.code)}
+                title={lang.name}
+              >
+                {lang.flag}
+              </button>
+            {/each}
+          </div>
+
           <!-- Initial State -->
           <div class="text-center py-16">
             <div class="w-20 h-20 mx-auto mb-4 bg-neutral-100 rounded-full flex items-center justify-center">
-              <img src={appIcon} alt="DesignedbyGG Updater" class="w-full h-full object-contain rounded-lg" />
+              <img src={appIcon} alt={t.AppTitle} class="w-full h-full object-contain rounded-lg" />
             </div>
-            <p class="text-neutral-600 text-sm mb-6">Connect your keyboard and click detect</p>
+            <p class="text-neutral-600 text-sm mb-6">{t.ConnectAndDetect}</p>
             <button class="btn btn-neutral btn-wide" on:click={detectDevice}>
-              Detect Device
+              {t.DetectDevice}
             </button>
           </div>
         {/if}
@@ -267,7 +289,7 @@
           <!-- Detecting State -->
           <div class="text-center py-16">
             <span class="loading loading-spinner loading-lg mb-3 text-neutral-600"></span>
-            <p class="text-neutral-600 text-sm">Scanning for devices...</p>
+            <p class="text-neutral-600 text-sm">{t.Scanning}</p>
           </div>
         {/if}
 
@@ -302,28 +324,28 @@
                   </div>
                   {#if device.manufacturer}
                     <div class="flex justify-between border-b border-neutral-100 pb-1.5">
-                      <span class="text-neutral-500">Manufacturer</span>
+                      <span class="text-neutral-500">{t.Manufacturer}</span>
                       <span>{device.manufacturer}</span>
                     </div>
                   {/if}
                   {#if device.product}
                     <div class="flex justify-between border-b border-neutral-100 pb-1.5">
-                      <span class="text-neutral-500">Product</span>
+                      <span class="text-neutral-500">{t.Product}</span>
                       <span>{device.product}</span>
                     </div>
                   {/if}
                   <div class="flex justify-between pt-1.5">
-                    <span class="text-neutral-500">Mode</span>
+                    <span class="text-neutral-500">{t.Mode}</span>
                     {#if !device.isBootloader}
-                      <span class="badge badge-warning badge-sm">Application</span>
+                      <span class="badge badge-warning badge-sm">{t.ApplicationMode}</span>
                     {:else}
-                      <span class="badge badge-success badge-sm">Bootloader</span>
+                      <span class="badge badge-success badge-sm">{t.BootloaderMode}</span>
                     {/if}
                   </div>
                   
                   {#if device.isBootloader && selectedFirmware}
                     <div class="flex justify-between border-t border-neutral-100 pt-1.5 mt-2">
-                      <span class="text-neutral-500">Firmware</span>
+                      <span class="text-neutral-500">{t.Firmware}</span>
                       <span class="text-xs text-success font-mono">{selectedKeyboardModel}</span>
                     </div>
                   {/if}
@@ -337,38 +359,38 @@
               <div class="alert alert-warning mb-2 py-3">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                 <div class="flex-1 text-xs">
-                  <h3 class="font-semibold">USB Permissions Required</h3>
+                  <h3 class="font-semibold">{t.USBPermissionsRequired}</h3>
                   <div class="mt-1">
-                    <button class="link link-hover" on:click={copyUdevRules}>Copy rules</button>
-                    then: <code class="text-xs bg-neutral-800 text-neutral-200 px-1 py-0.5 rounded">sudo tee /etc/udev/rules.d/50-sonix-keyboards.rules</code>
+                    <button class="link link-hover" on:click={copyUdevRules}>{t.CopyRules}</button>
+                    {t.ThenPaste} <code class="text-xs bg-neutral-800 text-neutral-200 px-1 py-0.5 rounded">sudo tee /etc/udev/rules.d/50-sonix-keyboards.rules</code>
                   </div>
                 </div>
               </div>
               <button class="btn btn-ghost btn-xs w-full mb-2" on:click={() => showUdevWarning = false}>
-                Continue anyway
+                {t.ContinueAnyway}
               </button>
             {:else if device.isBootloader}
               <!-- Bootloader Mode: Select Keyboard Button -->
               <button class="btn btn-outline btn-lg w-full mb-2" on:click={() => showKeyboardSelectModal = true}>
-                {selectedFirmware ? 'Change Keyboard' : 'Select Keyboard'}
+                {selectedFirmware ? t.ChangeKeyboard : t.SelectKeyboard}
               </button>
               <button class="btn btn-neutral btn-lg w-full mb-2" on:click={openConfirmModal} disabled={!canFlash}>
-                Flash Firmware
+                {t.FlashFirmware}
               </button>
             {:else}
               <!-- Application Mode: Direct Flash -->
               <button class="btn btn-neutral btn-lg w-full mb-2" on:click={openConfirmModal}>
-                Flash Firmware
+                {t.FlashFirmware}
               </button>
             {/if}
 
             <!-- Actions -->
             <div class="flex gap-2">
               <button class="btn btn-ghost btn-sm flex-1 text-neutral-600" on:click={detectDevice}>
-                Detect Again
+                {t.DetectAgain}
               </button>
               <button class="btn btn-ghost btn-sm flex-1 text-neutral-600" on:click={() => showLogsModal = true}>
-                Show Logs
+                {t.ShowLogs}
               </button>
             </div>
           </div>
@@ -380,11 +402,11 @@
             <div class="mb-3 flex justify-center">
               <span class="loading loading-spinner loading-lg text-neutral-600"></span>
             </div>
-            <p class="text-neutral-600">Flashing firmware...</p>
-            <p class="text-xs text-neutral-400 mt-1">Do not disconnect</p>
+            <p class="text-neutral-600">{t.FlashingFirmware}</p>
+            <p class="text-xs text-neutral-400 mt-1">{t.DoNotDisconnect}</p>
             {#if logs.length > 0}
               <button class="btn btn-ghost btn-sm mt-4" on:click={() => showLogsModal = true}>
-                View Progress
+                {t.ViewProgress}
               </button>
             {/if}
           </div>
@@ -398,10 +420,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 class="text-lg font-light text-neutral-800 mb-2">Flash Complete</h3>
-            <p class="text-neutral-600 text-sm mb-4">Your keyboard will reboot automatically</p>
+            <h3 class="text-lg font-light text-neutral-800 mb-2">{t.FlashComplete}</h3>
+            <p class="text-neutral-600 text-sm mb-4">{t.KeyboardWillReboot}</p>
             <button class="btn btn-outline btn-wide" on:click={reset}>
-              Flash Another
+              {t.FlashAnother}
             </button>
           </div>
         {/if}
@@ -415,16 +437,16 @@
               </svg>
             </div>
             <h3 class="text-lg font-light text-neutral-800 mb-2">
-              {errorMsg.includes('No device') || errorMsg.includes('not detected') ? 'No Device Found' : 'Flash Failed'}
+              {errorMsg.includes('No device') || errorMsg.includes('not detected') ? t.NoDeviceFound : t.FlashFailed}
             </h3>
             <p class="text-xs text-red-600 mb-4">{errorMsg}</p>
             <div class="flex gap-2 justify-center">
               <button class="btn btn-neutral" on:click={detectDevice}>
-                Try Again
+                {t.TryAgain}
               </button>
               {#if logs.length > 0}
                 <button class="btn btn-ghost" on:click={() => showLogsModal = true}>
-                  View Logs
+                  {t.ViewLogs}
                 </button>
               {/if}
             </div>
@@ -438,7 +460,7 @@
     <div class="text-center mt-3 text-xs text-neutral-400 pb-4">
       Powered by <button class="link link-hover" on:click={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC')}>SonixFlasher</button>
       <span class="mx-2">·</span>
-      <button class="link link-hover" on:click={() => showAboutModal = true}>About</button>
+      <button class="link link-hover" on:click={() => showAboutModal = true}>{t.About}</button>
     </div>
 
   </div>
@@ -448,7 +470,7 @@
 {#if showKeyboardSelectModal}
   <div class="modal modal-open">
     <div class="modal-box bg-white">
-      <h3 class="font-light text-xl mb-4 text-neutral-800">Select Keyboard</h3>
+      <h3 class="font-light text-xl mb-4 text-neutral-800">{t.SelectKeyboard}</h3>
       
       <div class="space-y-2">
         {#each availableKeyboards as keyboard}
@@ -466,12 +488,12 @@
         <div class="divider text-xs">or</div>
         
         <button class="btn btn-ghost w-full" on:click={browseCustomFirmware}>
-          Browse for custom firmware...
+          {t.BrowseCustomFirmware}
         </button>
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-sm" on:click={() => showKeyboardSelectModal = false}>Cancel</button>
+        <button class="btn btn-sm" on:click={() => showKeyboardSelectModal = false}>{t.Cancel}</button>
       </div>
     </div>
   </div>
@@ -481,29 +503,29 @@
 {#if showConfirmModal}
   <div class="modal modal-open">
     <div class="modal-box bg-white max-w-md">
-      <h3 class="font-bold text-xl text-error mb-4">⚠️ Warning</h3>
+      <h3 class="font-bold text-xl text-error mb-4">{t.Warning}</h3>
       
       <div class="alert alert-error mb-4">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
         <div class="text-sm">
-          <p class="font-bold">This is a potentially dangerous operation!</p>
-          <p class="text-xs mt-1">Flashing wrong firmware can brick your device.</p>
+          <p class="font-bold">{t.DangerousOperation}</p>
+          <p class="text-xs mt-1">{t.FlashingWrongFirmware}</p>
         </div>
       </div>
 
       <div class="mb-4">
         <p class="text-sm text-neutral-600 mb-2">
           {#if isCustomFirmware}
-            You are about to flash <strong>custom firmware</strong>. You are responsible for any issues that may occur.
+            {t.AboutToFlashCustom}
           {:else}
-            You are about to flash firmware for <strong>{selectedKeyboardModel}</strong>. Make sure this matches your keyboard model.
+            {t.AboutToFlashModelPrefix} <strong>{selectedKeyboardModel}</strong>. {t.AboutToFlashModelSuffix}
           {/if}
         </p>
       </div>
 
       <div class="form-control mb-4">
         <label class="label" for="confirmation-input">
-          <span class="label-text text-sm">Type <code class="font-bold bg-neutral-200 px-1 rounded">{confirmationRequired}</code> to proceed:</span>
+          <span class="label-text text-sm">{t.TypePrefix} <code class="font-bold bg-neutral-200 px-1 rounded">{confirmationRequired}</code> {t.TypeSuffix}</span>
         </label>
         <input 
           id="confirmation-input"
@@ -518,11 +540,11 @@
       <div class="flex items-center justify-between mb-4">
         <div class="text-sm text-neutral-600">
           {#if countdown > 0}
-            Please wait {countdown} second{countdown !== 1 ? 's' : ''}...
+            {t.PleaseWaitPrefix} {countdown} {countdown !== 1 ? t.Seconds : t.Second}{t.PleaseWaitSuffix}
           {:else if !confirmationMatch}
-            <span class="text-error">Text doesn't match</span>
+            <span class="text-error">{t.TextDoesntMatch}</span>
           {:else}
-            <span class="text-success">Ready to proceed</span>
+            <span class="text-success">{t.ReadyToProceed}</span>
           {/if}
         </div>
         {#if countdown > 0}
@@ -533,9 +555,9 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-ghost" on:click={closeConfirmModal}>Cancel</button>
+        <button class="btn btn-ghost" on:click={closeConfirmModal}>{t.Cancel}</button>
         <button class="btn btn-error" on:click={confirmAndFlash} disabled={!canProceed}>
-          Flash Now
+          {t.FlashNow}
         </button>
       </div>
     </div>
@@ -549,7 +571,7 @@
       <div class="text-center mb-6">
         <div class="w-20 h-20 mx-auto mb-3">
           {#if appIcon}
-            <img src={appIcon} alt="DesignedbyGG Updater" class="w-full h-full object-contain rounded-lg" />
+            <img src={appIcon} alt={t.AppTitle} class="w-full h-full object-contain rounded-lg" />
           {:else}
             <div class="w-full h-full bg-neutral-100 rounded-lg flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -558,24 +580,24 @@
             </div>
           {/if}
         </div>
-        <h2 class="text-2xl font-light text-neutral-800 mb-1">DesignedbyGG Updater</h2>
+        <h2 class="text-2xl font-light text-neutral-800 mb-1">{t.AppTitle}</h2>
         <p class="text-sm text-neutral-500">Version 1.0.0</p>
       </div>
 
       <div class="space-y-4 text-sm text-neutral-600">
         <div>
-          <p class="font-semibold mb-1">About</p>
-          <p class="text-xs">A modern GUI wrapper for SonixFlasher, designed to simplify firmware updates for DesignedbyGG keyboards.</p>
+          <p class="font-semibold mb-1">{t.About}</p>
+          <p class="text-xs">{t.AppDescription}</p>
         </div>
 
         <div>
-          <p class="font-semibold mb-1">Copyright</p>
+          <p class="font-semibold mb-1">{t.Copyright}</p>
           <p class="text-xs">© 2026 DesignedbyGG</p>
           <p class="text-xs">Licensed under GPL-3.0</p>
         </div>
 
         <div>
-          <p class="font-semibold mb-1">Built With</p>
+          <p class="font-semibold mb-1">{t.BuiltWith}</p>
           <div class="flex gap-2 flex-wrap text-xs">
             <button on:click={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC')} class="badge badge-outline badge-sm link link-hover">SonixFlasher</button>
             <button on:click={() => BrowserOpenURL('https://wails.io')} class="badge badge-outline badge-sm link link-hover">Wails v2</button>
@@ -586,23 +608,23 @@
         </div>
 
           <div>
-            <p class="font-semibold mb-1">Links</p>
+            <p class="font-semibold mb-1">{t.Links}</p>
             <div class="space-y-1 text-xs">
               <div>
-                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater')} class="link link-hover">GitHub Repository</button>
+                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater')} class="link link-hover">{t.GitHubRepository}</button>
               </div>
               <div>
-                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/issues')} class="link link-hover">Report an Issue</button>
+                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/issues')} class="link link-hover">{t.ReportIssue}</button>
               </div>
               <div>
-                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/blob/master/LICENSE')} class="link link-hover">View License</button>
+                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/blob/master/LICENSE')} class="link link-hover">{t.ViewLicense}</button>
               </div>
             </div>
           </div>
         </div>
 
       <div class="modal-action">
-        <button class="btn btn-sm" on:click={() => showAboutModal = false}>Close</button>
+        <button class="btn btn-sm" on:click={() => showAboutModal = false}>{t.Close}</button>
       </div>
     </div>
   </div>
@@ -613,7 +635,7 @@
   <div class="modal modal-open">
     <div class="modal-box max-w-4xl bg-white">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-light text-xl text-neutral-800">Console Output</h3>
+        <h3 class="font-light text-xl text-neutral-800">{t.ConsoleOutput}</h3>
         {#if logs.length > 0}
           <button class="btn btn-sm btn-ghost" on:click={() => {
             const text = logs.map(l => `[${l.timestamp}] ${l.message}`).join('\n')
@@ -622,13 +644,13 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            Copy
+            {t.Copy}
           </button>
         {/if}
       </div>
       
       {#if logs.length === 0}
-        <p class="text-center text-neutral-500 py-8">No logs available</p>
+        <p class="text-center text-neutral-500 py-8">{t.NoLogsAvailable}</p>
       {:else}
         <div class="bg-neutral-50 rounded-lg p-4 max-h-96 overflow-y-auto border border-neutral-200">
           <div class="font-mono text-xs space-y-0.5">
@@ -643,7 +665,7 @@
       {/if}
 
       <div class="modal-action">
-        <button class="btn btn-sm" on:click={() => showLogsModal = false}>Close</button>
+        <button class="btn btn-sm" on:click={() => showLogsModal = false}>{t.Close}</button>
       </div>
     </div>
   </div>
@@ -652,10 +674,10 @@
 {#if showModelSelectModal}
   <div class="modal modal-open">
     <div class="modal-box bg-white max-w-4xl">
-      <h3 class="font-light text-xl mb-4 text-neutral-800">Select Your Keyboard Model</h3>
+      <h3 class="font-light text-xl mb-4 text-neutral-800">{t.SelectYourKeyboard}</h3>
       
       <p class="text-sm text-neutral-600 mb-6">
-        Multiple keyboard models share the same hardware revision. Please select your model:
+        {t.MultipleModelsDetected}
       </p>
 
       <div class="grid grid-cols-2 gap-4 mb-6">
@@ -696,7 +718,7 @@
                 <div class="font-bold text-neutral-800 mb-1">{model.name}</div>
                 <div class="text-xs text-neutral-600 mb-2">{model.description}</div>
                 {#if !model.firmwarePath}
-                  <div class="badge badge-warning badge-sm">Coming Soon</div>
+                  <div class="badge badge-warning badge-sm">{t.ComingSoon}</div>
                 {/if}
               </div>
             </div>
@@ -706,14 +728,14 @@
 
       <div class="modal-action">
         <button class="btn btn-ghost" on:click={() => { showModelSelectModal = false; state = 'idle'; device = null; selectedModelIndex = null; }}>
-          Cancel
+          {t.Cancel}
         </button>
         <button 
           class="btn btn-neutral" 
           on:click={confirmModelSelection}
           disabled={selectedModelIndex === null}
         >
-          Confirm Selection
+          {t.ConfirmSelection}
         </button>
       </div>
     </div>
