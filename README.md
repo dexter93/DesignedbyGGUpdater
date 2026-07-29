@@ -8,7 +8,7 @@ A modern GUI firmware flasher for DesignedbyGG keyboards powered by SonixFlasher
 - 🖼️ Visual keyboard identification with images
 - 🔒 Safety confirmation dialogs to prevent bricking
 - 📝 Real-time console logging
-- 🐧 Cross-platform support (Windows, macOS, Linux)
+- 🐧 Cross-platform support (Windows, Linux - macOS coming soon)
 - 🔌 Embedded firmware for all supported models
 
 ## Supported Keyboards
@@ -20,7 +20,7 @@ A modern GUI firmware flasher for DesignedbyGG keyboards powered by SonixFlasher
 
 ## Installation
 
-Download the latest release for your platform from the [Releases]() page.
+Download the latest release for your platform from the [Releases](https://github.com/dexter93/DesignedbyGGUpdater/releases/latest) page.
 
 ### Linux Requirements
 
