@@ -49,3 +49,7 @@ func (a *App) emitLog(level, message string) {
 		Message:   message,
 	})
 }
+
+func (a *App) GetVersion() string {
+	return Version
+}

@@ -24,4 +24,6 @@ export function GetTranslations(arg1:string):Promise<main.Translation>;
 
 export function GetUdevRulesContent():Promise<string>;
 
+export function GetVersion():Promise<string>;
+
 export function SelectFirmware():Promise<string>;

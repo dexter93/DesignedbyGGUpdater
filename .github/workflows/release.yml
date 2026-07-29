@@ -8,6 +8,7 @@ on:
 
 env:
   APP_NAME: DesignedbyGGUpdater
+  APP_VERSION: ${{ github.ref_name }}
 
 jobs:
   build:
@@ -73,13 +74,46 @@ jobs:
           cd frontend
           npm install
 
+      - name: Update wails.json version (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          node -e "
+            const fs = require('fs');
+            const j = JSON.parse(fs.readFileSync('wails.json', 'utf8'));
+            if (!j.info) j.info = {};
+            j.info.productVersion = process.env.APP_VERSION.replace(/^v/, '');
+            fs.writeFileSync('wails.json', JSON.stringify(j, null, 2) + '\n');
+          "
+
       - name: Build application (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: wails build -platform ${{ matrix.platform }} ${{ matrix.build_flags }} -clean
+        run: wails build -platform ${{ matrix.platform }} ${{ matrix.build_flags }} -clean -ldflags "-X main.Version=${{ env.APP_VERSION }}"
 
       - name: Build application (Windows)
         if: matrix.os == 'windows-latest'
-        run: wails build -platform ${{ matrix.platform }} -clean
+        run: wails build -platform ${{ matrix.platform }} -clean -ldflags "-X main.Version=${{ env.APP_VERSION }}"
+
+      - name: Setup SM_CLIENT_CERT_FILE from base64 secret data
+        if: matrix.platform == 'windows/amd64'
+        run: |
+          export SM_CLIENT_CERT_FILE="$RUNNER_TEMP/sm_client_cert.p12"
+          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > "$SM_CLIENT_CERT_FILE"
+          echo "SM_CLIENT_CERT_FILE=$SM_CLIENT_CERT_FILE" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Code sign with DigiCert Software Trust Manager
+        if: matrix.platform == 'windows/amd64'
+        uses: digicert/code-signing-software-trust-action@v1
+        with:
+          simple-signing-mode: true
+          input: build/bin/
+          keypair-alias: ${{ secrets.SM_KEYPAIR_ALIAS }}
+        env:
+          SM_HOST: ${{ vars.SM_HOST }}
+          SM_API_KEY: ${{ secrets.SM_API_KEY }}
+          SM_CLIENT_CERT_FILE: ${{ env.SM_CLIENT_CERT_FILE }}
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
 
       - name: Setup SM_CLIENT_CERT_FILE from base64 secret data
         if: matrix.platform == 'windows/amd64'
@@ -104,7 +138,7 @@ jobs:
 
       - name: Build application (macOS)
         if: matrix.os == 'macos-latest'
-        run: wails build -platform ${{ matrix.platform }} -clean
+        run: wails build -platform ${{ matrix.platform }} -clean -ldflags "-X main.Version=${{ env.APP_VERSION }}"
 
       - name: Package Linux binary
         if: matrix.os == 'ubuntu-latest'

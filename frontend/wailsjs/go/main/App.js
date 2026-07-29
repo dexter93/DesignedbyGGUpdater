@@ -46,6 +46,10 @@ export function GetUdevRulesContent() {
   return window['go']['main']['App']['GetUdevRulesContent']();
 }
 
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
+}
+
 export function SelectFirmware() {
   return window['go']['main']['App']['SelectFirmware']();
 }

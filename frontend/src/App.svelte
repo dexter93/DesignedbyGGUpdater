@@ -1,9 +1,10 @@
 <script>
-  import { DetectDevice, FlashFirmware, CheckUdevRules, GetUdevRulesContent, GetKeyboardImage, GetAppIcon, SelectFirmware, GetAvailableKeyboards, GetTranslations, GetAvailableLanguages } from '../wailsjs/go/main/App'
+  import { DetectDevice, FlashFirmware, CheckUdevRules, GetUdevRulesContent, GetKeyboardImage, GetAppIcon, SelectFirmware, GetAvailableKeyboards, GetTranslations, GetAvailableLanguages, GetVersion } from '../wailsjs/go/main/App'
   import { EventsOn } from '../wailsjs/runtime/runtime'
   import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
   import { onMount } from 'svelte'
 
+  let appVersion = ''
   let currentLang = 'en'
   let t = {}
   let availableLanguages = []
@@ -42,6 +43,7 @@
     availableKeyboards = await GetAvailableKeyboards()
     availableLanguages = await GetAvailableLanguages()
     t = await GetTranslations(currentLang)
+    appVersion = await GetVersion()
   })
 
   async function switchLanguage(lang) {
@@ -581,7 +583,7 @@
           {/if}
         </div>
         <h2 class="text-2xl font-light text-neutral-800 mb-1">{t.AppTitle}</h2>
-        <p class="text-sm text-neutral-500">Version 1.0.0</p>
+        <p class="text-sm text-neutral-500">Version {appVersion}</p>
       </div>
 
       <div class="space-y-4 text-sm text-neutral-600">
