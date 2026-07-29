@@ -115,27 +115,6 @@ jobs:
           SM_CLIENT_CERT_FILE: ${{ env.SM_CLIENT_CERT_FILE }}
           SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
 
-      - name: Setup SM_CLIENT_CERT_FILE from base64 secret data
-        if: matrix.platform == 'windows/amd64'
-        run: |
-          export SM_CLIENT_CERT_FILE="$RUNNER_TEMP/sm_client_cert.p12"
-          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > "$SM_CLIENT_CERT_FILE"
-          echo "SM_CLIENT_CERT_FILE=$SM_CLIENT_CERT_FILE" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Code sign with DigiCert Software Trust Manager
-        if: matrix.platform == 'windows/amd64'
-        uses: digicert/code-signing-software-trust-action@v1
-        with:
-          simple-signing-mode: true
-          input: build/bin/
-          keypair-alias: ${{ secrets.SM_KEYPAIR_ALIAS }}
-        env:
-          SM_HOST: ${{ vars.SM_HOST }}
-          SM_API_KEY: ${{ secrets.SM_API_KEY }}
-          SM_CLIENT_CERT_FILE: ${{ env.SM_CLIENT_CERT_FILE }}
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
-
       - name: Build application (macOS)
         if: matrix.os == 'macos-latest'
         run: wails build -platform ${{ matrix.platform }} -clean -ldflags "-X main.Version=${{ env.APP_VERSION }}"
@@ -144,25 +123,25 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           cd build/bin
-          tar -czf ${{ matrix.artifact_name }}.tar.gz ${{ env.APP_NAME }}
-          mv ${{ matrix.artifact_name }}.tar.gz ../
+          tar -czf ${{ matrix.artifact_name }}-${{ env.APP_VERSION }}.tar.gz ${{ env.APP_NAME }}
+          mv ${{ matrix.artifact_name }}-${{ env.APP_VERSION }}.tar.gz ../
 
       - name: Package Windows binary
         if: matrix.os == 'windows-latest'
         run: |
           cd build/bin
-          Compress-Archive -Path ${{ env.APP_NAME }}.exe -DestinationPath ../${{ matrix.artifact_name }}.zip
+          Compress-Archive -Path ${{ env.APP_NAME }}.exe -DestinationPath ../${{ matrix.artifact_name }}-${{ env.APP_VERSION }}.zip
 
       - name: Package macOS binary (Apple Silicon)
         if: matrix.os == 'macos-latest' && matrix.platform == 'darwin/arm64'
         run: |
           cd build/bin
-          zip -r ../${{ matrix.artifact_name }}.zip ${{ env.APP_NAME }}.app
+          zip -r ../${{ matrix.artifact_name }}-${{ env.APP_VERSION }}.zip ${{ env.APP_NAME }}.app
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.artifact_name }}
+          name: ${{ matrix.artifact_name }}-${{ env.APP_VERSION }}
           path: |
             build/*.tar.gz
             build/*.zip
