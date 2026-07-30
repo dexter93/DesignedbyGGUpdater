@@ -258,7 +258,7 @@ func (a *App) GetTranslations(lang string) Translation {
 
 func (a *App) GetAvailableLanguages() []map[string]string {
 	return []map[string]string{
-		{"code": "en", "name": "English", "flag": "🍔"},
-		{"code": "fr", "name": "Français", "flag": "🥐"},
+		{"code": "en", "name": "English", "flag": "🇺🇸"},
+		{"code": "fr", "name": "Français", "flag": "🇫🇷"},
 	}
 }
