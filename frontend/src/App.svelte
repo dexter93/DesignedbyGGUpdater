@@ -26,14 +26,14 @@
   let confirmationText = ''
   let countdown = 15
   let countdownInterval = null
-  let confirmationRequired = ''
   let showModelSelectModal = false
   let modelCandidates = []
   let selectedModelIndex = null
   let availableKeyboards = []
 
   $: canFlash = state === 'ready' && device && !showUdevWarning && (device.isBootloader ? selectedFirmware : device.firmwarePath)
-  $: confirmationMatch = confirmationText.trim() === confirmationRequired
+  $: requiresConfirmation = !isCustomFirmware && !device?.isBootloader
+  $: confirmationMatch = !requiresConfirmation || confirmationText.trim() === selectedKeyboardModel
   $: canProceed = countdown === 0 && confirmationMatch
 
   onMount(async () => {
@@ -175,7 +175,6 @@
   function openConfirmModal() {
     if (!canFlash) return
     
-    confirmationRequired = isCustomFirmware ? t.CustomFirmwareConfirm : selectedKeyboardModel
     confirmationText = ''
     showConfirmModal = true
     startCountdown()
@@ -508,7 +507,9 @@
       <h3 class="font-bold text-xl text-error mb-4">{t.Warning}</h3>
       
       <div class="alert alert-error mb-4">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77-1.333.192-3 1.732-3z" />
+        </svg>
         <div class="text-sm">
           <p class="font-bold">{t.DangerousOperation}</p>
           <p class="text-xs mt-1">{t.FlashingWrongFirmware}</p>
@@ -525,42 +526,59 @@
         </p>
       </div>
 
-      <div class="form-control mb-4">
-        <label class="label" for="confirmation-input">
-          <span class="label-text text-sm">{t.TypePrefix} <code class="font-bold bg-neutral-200 px-1 rounded">{confirmationRequired}</code> {t.TypeSuffix}</span>
-        </label>
-        <input 
-          id="confirmation-input"
-          type="text" 
-          bind:value={confirmationText}
-          placeholder={confirmationRequired}
-          class="input input-bordered w-full"
-          disabled={countdown > 0}
-        />
-      </div>
+      {#if requiresConfirmation}
+        <div class="form-control mb-4">
+          <label class="label" for="confirmation-input">
+            <span class="label-text text-sm">
+              {t.TypePrefix}
+              <code class="font-bold bg-neutral-200 px-1 rounded">{selectedKeyboardModel}</code>
+              {t.TypeSuffix}
+            </span>
+          </label>
+          <input
+            id="confirmation-input"
+            type="text"
+            bind:value={confirmationText}
+            placeholder={selectedKeyboardModel}
+            class="input input-bordered w-full"
+            disabled={countdown > 0}
+          />
+        </div>
+      {/if}
 
-      <div class="flex items-center justify-between mb-4">
-        <div class="text-sm text-neutral-600">
+      <div class="flex items-center justify-between gap-4">
+        <div class="text-sm text-neutral-600 min-w-0">
           {#if countdown > 0}
             {t.PleaseWaitPrefix} {countdown} {countdown !== 1 ? t.Seconds : t.Second}{t.PleaseWaitSuffix}
-          {:else if !confirmationMatch}
+          {:else if requiresConfirmation && !confirmationMatch}
             <span class="text-error">{t.TextDoesntMatch}</span>
           {:else}
             <span class="text-success">{t.ReadyToProceed}</span>
           {/if}
         </div>
-        {#if countdown > 0}
-          <div class="radial-progress text-warning" style="--value:{((15 - countdown) / 15 * 100).toFixed(0)}; --size:2.5rem; --thickness: 3px;">
-            {countdown}
-          </div>
-        {/if}
-      </div>
 
-      <div class="modal-action">
-        <button class="btn btn-ghost" on:click={closeConfirmModal}>{t.Cancel}</button>
-        <button class="btn btn-error" on:click={confirmAndFlash} disabled={!canProceed}>
-          {t.FlashNow}
-        </button>
+        <div class="flex items-center gap-2 shrink-0">
+          <button class="btn btn-ghost" on:click={closeConfirmModal}>
+            {t.Cancel}
+          </button>
+
+          <button
+            class="btn btn-error gap-2"
+            on:click={confirmAndFlash}
+            disabled={!canProceed}
+          >
+            {#if countdown > 0}
+              <div
+                class="radial-progress text-warning"
+                style="--value:{((15 - countdown) / 15 * 100).toFixed(0)}; --size:1.75rem; --thickness: 2px;"
+              >
+                {countdown}
+              </div>
+            {:else}
+            {t.FlashNow}
+            {/if}
+          </button>
+        </div>
       </div>
     </div>
   </div>

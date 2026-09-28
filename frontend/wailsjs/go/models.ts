@@ -118,7 +118,6 @@ export namespace main {
 	    TextDoesntMatch: string;
 	    ReadyToProceed: string;
 	    FlashNow: string;
-	    CustomFirmwareConfirm: string;
 	    USBPermissionsRequired: string;
 	    CopyRules: string;
 	    ThenPaste: string;
@@ -199,7 +198,6 @@ export namespace main {
 	        this.TextDoesntMatch = source["TextDoesntMatch"];
 	        this.ReadyToProceed = source["ReadyToProceed"];
 	        this.FlashNow = source["FlashNow"];
-	        this.CustomFirmwareConfirm = source["CustomFirmwareConfirm"];
 	        this.USBPermissionsRequired = source["USBPermissionsRequired"];
 	        this.CopyRules = source["CopyRules"];
 	        this.ThenPaste = source["ThenPaste"];

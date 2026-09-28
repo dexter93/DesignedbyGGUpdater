@@ -61,7 +61,6 @@ type Translation struct {
 	TextDoesntMatch           string
 	ReadyToProceed            string
 	FlashNow                  string
-	CustomFirmwareConfirm     string
 	
 	// USB permissions
 	USBPermissionsRequired    string
@@ -147,7 +146,6 @@ var translations = map[string]Translation{
 		TextDoesntMatch:           "Text doesn't match",
 		ReadyToProceed:            "Ready to proceed",
 		FlashNow:                  "Flash Now",
-		CustomFirmwareConfirm:     "I like trains",
 		USBPermissionsRequired:    "USB Permissions Required",
 		CopyRules:                 "Copy rules",
 		ThenPaste:                 "then:",
@@ -223,7 +221,6 @@ var translations = map[string]Translation{
 		TextDoesntMatch:           "Le texte ne correspond pas",
 		ReadyToProceed:            "Prêt à continuer",
 		FlashNow:                  "Flasher Maintenant",
-		CustomFirmwareConfirm:     "Je suis une baguette",
 		USBPermissionsRequired:    "Permissions USB Requises",
 		CopyRules:                 "Copier les règles",
 		ThenPaste:                 "puis:",
