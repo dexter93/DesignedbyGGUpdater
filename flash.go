@@ -19,7 +19,7 @@ type FlashResult struct {
 
 func (a *App) GetSonixFlasherPath() (string, error) {
 	a.emitLog("info", fmt.Sprintf("Detecting platform: %s/%s", runtime.GOOS, runtime.GOARCH))
-	
+
 	var binaryPath string
 	switch runtime.GOOS {
 	case "darwin":
@@ -37,28 +37,43 @@ func (a *App) GetSonixFlasherPath() (string, error) {
 		return "", err
 	}
 
-	a.emitLog("info", fmt.Sprintf("Extracting embedded binary: %s", binaryPath))
-	data, err := binaries.ReadFile(binaryPath)
+	tmpDir := os.TempDir()
+
+	execName := "sonixflasher"
+	if runtime.GOOS == "windows" {
+		execName = "sonixflasher.exe"
+	}
+	tmpPath, err := a.extractEmbeddedFile(binaryPath, tmpDir, execName, 0755)
+	if err != nil {
+		return "", err
+	}
+
+	if runtime.GOOS == "windows" {
+		if _, err := a.extractEmbeddedFile("binaries/windows/libusb-1.0.dll", tmpDir, "libusb-1.0.dll", 0755); err != nil {
+			return "", err
+		}
+	}
+
+	a.emitLog("success", "Binary extracted successfully")
+	return tmpPath, nil
+}
+
+func (a *App) extractEmbeddedFile(srcPath, dstDir, dstName string, perm os.FileMode) (string, error) {
+	a.emitLog("info", fmt.Sprintf("Extracting embedded binary: %s", srcPath))
+	data, err := binaries.ReadFile(srcPath)
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to read embedded binary: %v", err))
 		return "", fmt.Errorf("failed to read embedded binary: %v", err)
 	}
 
-	tmpDir := os.TempDir()
-	execName := "sonixflasher"
-	if runtime.GOOS == "windows" {
-		execName = "sonixflasher.exe"
-	}
-	tmpPath := filepath.Join(tmpDir, execName)
-
-	a.emitLog("info", fmt.Sprintf("Writing binary to: %s", tmpPath))
-	if err := os.WriteFile(tmpPath, data, 0755); err != nil {
+	dstPath := filepath.Join(dstDir, dstName)
+	a.emitLog("info", fmt.Sprintf("Writing binary to: %s", dstPath))
+	if err := os.WriteFile(dstPath, data, perm); err != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to write binary: %v", err))
 		return "", fmt.Errorf("failed to write binary: %v", err)
 	}
 
-	a.emitLog("success", "Binary extracted successfully")
-	return tmpPath, nil
+	return dstPath, nil
 }
 
 func (a *App) GetEmbeddedFirmware(firmwarePath string) (string, error) {
