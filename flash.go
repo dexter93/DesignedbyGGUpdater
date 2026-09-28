@@ -1,14 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-
+	"sync"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -186,7 +185,7 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 
 	vidpid := fmt.Sprintf("%s/%s", device.VID, device.PID)
 	args := []string{
-		"--vidpid", vidpid,
+		"--vid-pid", vidpid,
 		"--file", firmwarePath,
 	}
 	
@@ -220,65 +219,67 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 		return &FlashResult{Success: false, Message: err.Error()}, nil
 	}
 
+	var outputMu sync.Mutex
 	successDetected := false
 	permissionError := false
+	deviceOpenError := false
+
+	handleOutput := func(line string) {
+		lower := strings.ToLower(line)
+
+		outputMu.Lock()
+		switch {
+		case line == "=== FLASHING COMPLETED SUCCESSFULLY ===":
+			successDetected = true
+
+		// v3: device was found, but its USB/HID interface could not be opened.
+		// This is the flasher's explicit permissions/access path.
+		case strings.Contains(lower, "device present but failed to open (permissions?)"),
+			strings.Contains(lower, "permission denied"),
+			strings.Contains(lower, "access denied"),
+			strings.Contains(lower, "access is denied"),
+			strings.Contains(lower, "libusb_error_access"):
+			permissionError = true
+
+		// v3: device was not found, or all attempts to open it failed without
+		// identifying the permissions/access path above.
+		case strings.Contains(lower, "device not found"),
+			strings.Contains(lower, "failed to open device after"):
+			deviceOpenError = true
+		}
+		outputMu.Unlock()
+
+		level := "info"
+		switch {
+		case strings.Contains(lower, "failed") ||
+			strings.Contains(lower, "error") ||
+			strings.Contains(lower, "invalid") ||
+			strings.Contains(lower, "mismatch") ||
+			strings.Contains(lower, "cannot open") ||
+			strings.Contains(lower, "unsupported"):
+			level = "error"
+		case strings.Contains(lower, "warning") ||
+			strings.Contains(lower, "potentially dangerous") ||
+			strings.Contains(lower, "skipped"):
+			level = "warn"
+		case strings.Contains(lower, "successfully") ||
+			strings.Contains(lower, "verified"):
+			level = "success"
+		}
+
+		a.emitLog(level, line)
+	}
 
 	outputDone := make(chan bool, 2)
+
 	go func() {
 		defer func() { outputDone <- true }()
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if line == "" {
-				continue
-			}
-			
-			if strings.Contains(line, "Device succesfully flashed") || 
-			   strings.Contains(line, "Flash Verification Checksum: OK") {
-				successDetected = true
-			}
-			
-			if strings.Contains(line, "Could not open the device") ||
-			   strings.Contains(line, "Device failed to open") ||
-			   strings.Contains(line, "Permission denied") {
-				permissionError = true
-			}
-			
-			level := "info"
-			if strings.Contains(strings.ToLower(line), "error") || 
-			   strings.Contains(strings.ToLower(line), "fail") {
-				level = "error"
-			} else if strings.Contains(strings.ToLower(line), "warn") {
-				level = "warn"
-			} else if strings.Contains(line, "✓") || 
-			          strings.Contains(strings.ToLower(line), "success") ||
-			          strings.Contains(strings.ToLower(line), "detected") ||
-			          strings.Contains(strings.ToLower(line), "done") ||
-			          strings.Contains(strings.ToLower(line), "ok") {
-				level = "success"
-			}
-			
-			a.emitLog(level, line)
-		}
+		_ = scanOutput(stdout, handleOutput)
 	}()
-	
+
 	go func() {
 		defer func() { outputDone <- true }()
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if line == "" {
-				continue
-			}
-			
-			if strings.Contains(line, "Could not open") ||
-			   strings.Contains(line, "Permission denied") ||
-			   strings.Contains(line, "access denied") {
-				permissionError = true
-			}
-			
-			a.emitLog("error", line)
-		}
+		_ = scanOutput(stderr, handleOutput)
 	}()
 
 	<-outputDone
@@ -286,12 +287,19 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 
 	a.emitLog("info", "Waiting for flash process to complete...")
 	err = cmd.Wait()
-	
+
+	outputMu.Lock()
+	completedSuccessfully := successDetected
+	hasPermissionError := permissionError
+	hasDeviceOpenError := deviceOpenError
+	outputMu.Unlock()
+
 	a.emitLog("info", "═══════════════════════════════════════")
-	
-	if permissionError {
+
+	if hasPermissionError {
 		a.emitLog("error", "✗ USB PERMISSION ERROR")
 		a.emitLog("error", "═══════════════════════════════════════")
+
 		if runtime.GOOS == "linux" {
 			a.emitLog("error", "Udev rules are required for USB access")
 			a.emitLog("warn", "Install udev rules and reload:")
@@ -299,13 +307,25 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 			a.emitLog("warn", "  sudo udevadm control --reload-rules")
 			a.emitLog("warn", "  sudo udevadm trigger")
 		}
+
 		return &FlashResult{
 			Success: false,
 			Message: "USB_PERMISSION_ERROR",
 		}, nil
 	}
-	
-	if successDetected {
+
+	if hasDeviceOpenError {
+		a.emitLog("error", "✗ DEVICE OPEN FAILED")
+		a.emitLog("error", "═══════════════════════════════════════")
+
+		return &FlashResult{
+			Success: false,
+			Message: "DEVICE_OPEN_ERROR",
+		}, nil
+	}
+
+	// SonixFlasherC v3 returns 0 after this exact final marker.
+	if err == nil && completedSuccessfully {
 		a.emitLog("success", "✓ FLASH COMPLETED SUCCESSFULLY")
 		a.emitLog("success", "═══════════════════════════════════════")
 		a.emitLog("info", "Device will reboot automatically")
@@ -316,20 +336,22 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 			Message: "Device successfully flashed!",
 		}, nil
 	}
-	
+
 	if err != nil {
 		a.emitLog("error", "✗ FLASH FAILED")
 		a.emitLog("error", fmt.Sprintf("Exit error: %v", err))
 		a.emitLog("error", "═══════════════════════════════════════")
+
 		return &FlashResult{
 			Success: false,
 			Message: fmt.Sprintf("Flash failed: %v", err),
 		}, nil
 	}
-	
+
 	a.emitLog("warn", "⚠ FLASH STATUS UNKNOWN")
 	a.emitLog("warn", "Process completed but success not confirmed")
 	a.emitLog("warn", "═══════════════════════════════════════")
+
 	return &FlashResult{
 		Success: false,
 		Message: "Flash status unclear - check logs",
