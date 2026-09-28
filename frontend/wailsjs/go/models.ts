@@ -132,6 +132,9 @@ export namespace main {
 	    ConsoleOutput: string;
 	    Copy: string;
 	    NoLogsAvailable: string;
+	    HIDEnumerationError: string;
+	    FlashError: string;
+	    UnexpectedError: string;
 	    USBPermissionError: string;
 	    InstallUdevRules: string;
 	    UdevRulesRequired: string;
@@ -212,6 +215,9 @@ export namespace main {
 	        this.ConsoleOutput = source["ConsoleOutput"];
 	        this.Copy = source["Copy"];
 	        this.NoLogsAvailable = source["NoLogsAvailable"];
+	        this.HIDEnumerationError = source["HIDEnumerationError"];
+	        this.FlashError = source["FlashError"];
+	        this.UnexpectedError = source["UnexpectedError"];
 	        this.USBPermissionError = source["USBPermissionError"];
 	        this.InstallUdevRules = source["InstallUdevRules"];
 	        this.UdevRulesRequired = source["UdevRulesRequired"];

@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type FlashResult struct {
@@ -77,7 +77,7 @@ func (a *App) extractEmbeddedFile(srcPath, dstDir, dstName string, perm os.FileM
 
 func (a *App) GetEmbeddedFirmware(firmwarePath string) (string, error) {
 	a.emitLog("info", fmt.Sprintf("Loading embedded firmware: %s", firmwarePath))
-	
+
 	data, err := binaries.ReadFile(firmwarePath)
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("Firmware not found: %v", err))
@@ -98,37 +98,37 @@ func (a *App) GetEmbeddedFirmware(firmwarePath string) (string, error) {
 
 func (a *App) SelectFirmware() (string, error) {
 	a.emitLog("info", "Opening firmware file picker...")
-	
+
 	file, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
 		Title: "Select Firmware",
 		Filters: []wailsruntime.FileFilter{
 			{DisplayName: "Binary Files (*.bin)", Pattern: "*.bin"},
 		},
 	})
-	
+
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("File picker error: %v", err))
 		return "", err
 	}
-	
+
 	if file == "" {
 		a.emitLog("warn", "File selection cancelled")
 		return "", nil
 	}
-	
+
 	info, err := os.Stat(file)
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("Cannot access file: %v", err))
 		return "", err
 	}
-	
+
 	a.emitLog("success", "═══════════════════════════════════════")
 	a.emitLog("success", "✓ FIRMWARE SELECTED")
 	a.emitLog("info", fmt.Sprintf("  File: %s", filepath.Base(file)))
 	a.emitLog("info", fmt.Sprintf("  Path: %s", file))
 	a.emitLog("info", fmt.Sprintf("  Size: %d bytes (%.2f KB)", info.Size(), float64(info.Size())/1024))
 	a.emitLog("success", "═══════════════════════════════════════")
-	
+
 	return file, nil
 }
 
@@ -138,15 +138,15 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 	a.emitLog("info", "═══════════════════════════════════════")
 	a.emitLog("info", fmt.Sprintf("Device: %s", device.Name))
 	a.emitLog("info", fmt.Sprintf("VID:PID: %s/%s", device.VID, device.PID))
-	
+
 	var firmwarePath string
 	var cleanupFirmware bool
-	
+
 	if customFirmwarePath != "" {
 		if strings.HasPrefix(customFirmwarePath, "firmware/") {
 			tmpPath, err := a.GetEmbeddedFirmware(customFirmwarePath)
 			if err != nil {
-				return &FlashResult{Success: false, Message: err.Error()}, nil
+				return nil, newAppError(errCodeFlash, err)
 			}
 			firmwarePath = tmpPath
 			cleanupFirmware = true
@@ -159,7 +159,7 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 	} else if device.FirmwarePath != "" {
 		tmpPath, err := a.GetEmbeddedFirmware(device.FirmwarePath)
 		if err != nil {
-			return &FlashResult{Success: false, Message: err.Error()}, nil
+			return nil, newAppError(errCodeFlash, err)
 		}
 		firmwarePath = tmpPath
 		cleanupFirmware = true
@@ -167,7 +167,7 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 	} else {
 		err := fmt.Errorf("no firmware specified")
 		a.emitLog("error", err.Error())
-		return &FlashResult{Success: false, Message: err.Error()}, nil
+		return nil, newAppError(errCodeFlash, err)
 	}
 
 	if cleanupFirmware {
@@ -176,10 +176,10 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 
 	a.emitLog("info", fmt.Sprintf("Offset: 0x%x (%d bytes)", offset, offset))
 	a.emitLog("info", "═══════════════════════════════════════")
-	
+
 	binPath, err := a.GetSonixFlasherPath()
 	if err != nil {
-		return &FlashResult{Success: false, Message: err.Error()}, nil
+		return nil, newAppError(errCodeFlash, err)
 	}
 	defer os.Remove(binPath)
 
@@ -188,35 +188,35 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 		"--vid-pid", vidpid,
 		"--file", firmwarePath,
 	}
-	
+
 	if !device.IsBootloader {
 		args = append(args, "--reboot", "sonix")
 		a.emitLog("warn", "Device in application mode, will reboot to bootloader...")
 	}
-	
+
 	if offset > 0 {
 		args = append(args, "--offset", fmt.Sprintf("0x%x", offset))
 	}
 
 	a.emitLog("info", fmt.Sprintf("Executing: %s %s", filepath.Base(binPath), strings.Join(args, " ")))
-	
+
 	cmd := exec.Command(binPath, args...)
 	hideConsoleWindow(cmd)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to create stdout pipe: %v", err))
-		return &FlashResult{Success: false, Message: err.Error()}, nil
+		return nil, newAppError(errCodeFlash, err)
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to create stderr pipe: %v", err))
-		return &FlashResult{Success: false, Message: err.Error()}, nil
+		return nil, newAppError(errCodeFlash, err)
 	}
 
 	a.emitLog("info", "Starting sonixflasher process...")
 	if err := cmd.Start(); err != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to start process: %v", err))
-		return &FlashResult{Success: false, Message: err.Error()}, nil
+		return nil, newAppError(errCodeFlash, err)
 	}
 
 	var outputMu sync.Mutex
@@ -308,20 +308,15 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 			a.emitLog("warn", "  sudo udevadm trigger")
 		}
 
-		return &FlashResult{
-			Success: false,
-			Message: "USB_PERMISSION_ERROR",
-		}, nil
+		return nil, newAppError(errCodeUSBPermission, nil)
 	}
 
 	if hasDeviceOpenError {
 		a.emitLog("error", "✗ DEVICE OPEN FAILED")
 		a.emitLog("error", "═══════════════════════════════════════")
 
-		return &FlashResult{
-			Success: false,
-			Message: "DEVICE_OPEN_ERROR",
-		}, nil
+		err := fmt.Errorf("device could not be opened")
+		return nil, newAppError(errCodeFlash, err)
 	}
 
 	// SonixFlasherC v3 returns 0 after this exact final marker.
@@ -342,18 +337,15 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 		a.emitLog("error", fmt.Sprintf("Exit error: %v", err))
 		a.emitLog("error", "═══════════════════════════════════════")
 
-		return &FlashResult{
-			Success: false,
-			Message: fmt.Sprintf("Flash failed: %v", err),
-		}, nil
+		return nil, newAppError(errCodeFlash, err)
 	}
 
 	a.emitLog("warn", "⚠ FLASH STATUS UNKNOWN")
 	a.emitLog("warn", "Process completed but success not confirmed")
 	a.emitLog("warn", "═══════════════════════════════════════")
 
-	return &FlashResult{
-		Success: false,
-		Message: "Flash status unclear - check logs",
-	}, nil
+	return nil, newAppError(
+		errCodeFlash,
+		fmt.Errorf("flash status could not be confirmed"),
+	)
 }

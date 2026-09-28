@@ -9,7 +9,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
-
 )
 
 //go:embed all:frontend/dist
@@ -66,7 +65,6 @@ func main() {
 			WindowIsTranslucent: false,
 			WebviewGpuPolicy:    linux.WebviewGpuPolicyAlways,
 		},
-
 	})
 
 	if err != nil {

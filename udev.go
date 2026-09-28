@@ -13,7 +13,7 @@ func (a *App) CheckUdevRules(vid uint16, pid uint16) bool {
 	}
 
 	var canOpen bool
-	
+
 	err := hid.Enumerate(vid, pid, func(info *hid.DeviceInfo) error {
 		dev, err := hid.OpenPath(info.Path)
 		if err == nil {
@@ -22,11 +22,11 @@ func (a *App) CheckUdevRules(vid uint16, pid uint16) bool {
 		}
 		return nil
 	})
-	
+
 	if err != nil {
 		return false
 	}
-	
+
 	return canOpen
 }
 

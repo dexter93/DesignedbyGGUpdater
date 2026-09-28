@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"github.com/sstallion/go-hid"
 	"runtime"
 	"strings"
-	"encoding/json"
-	"github.com/sstallion/go-hid"
 )
 
 const SONIX_VID = 0x0C45
@@ -69,7 +69,6 @@ var knownAppModePIDs = map[uint16][]AppModeDevice{
 			BootloaderPID: 0x7040,
 			BcdDevice:     0x0108,
 		},
-
 	},
 	0x511E: {
 		{
@@ -104,18 +103,18 @@ func (a *App) DetectDevice() (*Device, error) {
 
 	err := hid.Enumerate(0, 0, func(info *hid.DeviceInfo) error {
 		deviceCount++
-		
+
 		deviceKey := fmt.Sprintf("%04x:%04x:%s", info.VendorID, info.ProductID, info.SerialNbr)
-		
+
 		if seenDevices[deviceKey] {
 			return nil
 		}
-		
+
 		// Check for bootloader mode
 		if info.VendorID == SONIX_VID {
 			if chipName, ok := knownBootloaderPIDs[info.ProductID]; ok {
 				seenDevices[deviceKey] = true
-				
+
 				device := &Device{
 					VID:          fmt.Sprintf("%04x", info.VendorID),
 					PID:          fmt.Sprintf("%04x", info.ProductID),
@@ -128,10 +127,10 @@ func (a *App) DetectDevice() (*Device, error) {
 					FirmwarePath: "",
 				}
 				detectedDevices = append(detectedDevices, device)
-				
+
 				a.emitLog("success", fmt.Sprintf("✓ Found in BOOTLOADER mode: %s", chipName))
 				a.emitLog("info", fmt.Sprintf("  VID: 0x%s | PID: 0x%s", device.VID, device.PID))
-				
+
 				if runtime.GOOS == "linux" {
 					if !a.CheckUdevRules(info.VendorID, info.ProductID) {
 						a.emitLog("warn", "  ⚠ Udev rules missing for this device")
@@ -139,7 +138,7 @@ func (a *App) DetectDevice() (*Device, error) {
 				}
 			}
 		}
-		
+
 		// Check for application mode
 		if info.VendorID == DESIGNEDBYGG_VID {
 			if appDevices, ok := knownAppModePIDs[info.ProductID]; ok {
@@ -153,7 +152,7 @@ func (a *App) DetectDevice() (*Device, error) {
 				if len(matchedDevices) > 0 {
 					var matchedDevice *AppModeDevice
 					var candidatesJSON string
-					
+
 					if len(matchedDevices) > 1 {
 						// Multiple devices with same bcdDevice - needs disambiguation
 						matchedDevice = &matchedDevices[0]
@@ -164,7 +163,7 @@ func (a *App) DetectDevice() (*Device, error) {
 					}
 
 					seenDevices[deviceKey] = true
-					
+
 					firmwareExists := matchedDevice.FirmwarePath != ""
 					if firmwareExists {
 						_, err := binaries.ReadFile(matchedDevice.FirmwarePath)
@@ -186,23 +185,23 @@ func (a *App) DetectDevice() (*Device, error) {
 						Candidates:   candidatesJSON,
 					}
 					detectedDevices = append(detectedDevices, device)
-					
+
 					if len(matchedDevices) > 1 {
 						a.emitLog("warn", "⚠ Multiple models detected - disambiguation required")
 					}
-					
+
 					a.emitLog("success", fmt.Sprintf("✓ Found in APPLICATION mode: %s", matchedDevice.Description))
-					a.emitLog("info", fmt.Sprintf("  VID: 0x%s | PID: 0x%s | bcdDevice: %d.%02d", 
+					a.emitLog("info", fmt.Sprintf("  VID: 0x%s | PID: 0x%s | bcdDevice: %d.%02d",
 						device.VID, device.PID, info.ReleaseNbr>>8, info.ReleaseNbr&0xFF))
 					a.emitLog("info", fmt.Sprintf("  Model: %s", matchedDevice.Name))
-					
+
 					if firmwareExists {
 						a.emitLog("success", fmt.Sprintf("  ✓ Embedded firmware: %s", matchedDevice.FirmwarePath))
 					} else {
 						a.emitLog("warn", fmt.Sprintf("  ✗ Firmware not available"))
 					}
 					a.emitLog("warn", "  Note: Requires --reboot to enter bootloader mode")
-					
+
 					if runtime.GOOS == "linux" {
 						if !a.CheckUdevRules(info.VendorID, info.ProductID) {
 							a.emitLog("warn", "  ⚠ Udev rules missing for this device")
@@ -211,13 +210,13 @@ func (a *App) DetectDevice() (*Device, error) {
 				}
 			}
 		}
-		
+
 		return nil
 	})
 
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to enumerate HID devices: %v", err))
-		return nil, fmt.Errorf("failed to enumerate HID devices: %v", err)
+		return nil, newAppError(classifyHIDError(err), err)
 	}
 
 	a.emitLog("info", fmt.Sprintf("Scanned %d HID devices total", deviceCount))
@@ -236,16 +235,16 @@ func (a *App) DetectDevice() (*Device, error) {
 		a.emitLog("warn", "     - Flasher will reboot to bootloader automatically")
 		a.emitLog("warn", "  3. Check USB cable connection")
 		a.emitLog("warn", "  4. Try a different USB port")
-		
+
 		if runtime.GOOS == "linux" {
 			a.emitLog("warn", "  5. Check udev rules and permissions")
 		}
-		
-		return nil, fmt.Errorf("no compatible device detected")
+
+		return nil, newAppError(errCodeNoDevice, nil)
 	}
 
 	device := detectedDevices[0]
-	
+
 	a.emitLog("success", "═══════════════════════════════════════")
 	a.emitLog("success", fmt.Sprintf("✓ DEVICE READY: %s", device.Name))
 	a.emitLog("success", fmt.Sprintf("  VID: 0x%s | PID: 0x%s", device.VID, device.PID))

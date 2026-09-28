@@ -31,13 +31,13 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	
+
 	if err := hid.Init(); err != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to initialize HID: %v", err))
 	} else {
 		a.emitLog("info", "HID library initialized")
 	}
-	
+
 	a.emitLog("info", "Application started")
 	a.emitLog("info", "DesignedbyGG Keyboard Flasher")
 }

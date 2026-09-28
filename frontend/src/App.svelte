@@ -56,6 +56,47 @@
     await navigator.clipboard.writeText(rules)
   }
 
+  function getErrorCode(err) {
+    const message = err?.message || ''
+
+    const match = message.match(
+      /^(NO_DEVICE|USB_PERMISSION|HID_ENUMERATION|FLASH)(?::|$)/
+    )
+
+    return match?.[1] || 'UNKNOWN'
+  }
+
+  function handleAppError(err, { showUdevHint = false } = {}) {
+    const code = getErrorCode(err)
+
+    console.error('Operation failed:', err)
+
+    showUdevWarning =
+      code === 'USB_PERMISSION' && showUdevHint
+
+    switch (code) {
+      case 'NO_DEVICE':
+        errorMsg = t.NoDeviceDetected
+        break
+
+      case 'USB_PERMISSION':
+        errorMsg = t.USBPermissionError
+        break
+
+      case 'HID_ENUMERATION':
+        errorMsg = t.HIDEnumerationError
+        break
+
+      case 'FLASH':
+        errorMsg = t.FlashError
+        break
+
+      default:
+        errorMsg = t.UnexpectedError
+        break
+    }
+  }
+
   async function detectDevice() {
     state = 'detecting'
     logs = []
@@ -93,14 +134,7 @@
       
     } catch (err) {
       state = 'error'
-      if (err && err.message && (err.message.includes('Permission denied') || err.message.includes('access') || err.message.includes(t.PermissionDenied))) {
-        errorMsg = t.USBPermissionError
-        if (isLinux) {
-          showUdevWarning = true
-        }
-      } else {
-        errorMsg = err?.message || t.NoDeviceDetected
-      }
+      handleAppError(err, { showUdevHint: isLinux })
     }
   }
 
@@ -205,26 +239,13 @@
     
     try {
       const fwPath = device.isBootloader ? selectedFirmware : ''
-      const result = await FlashFirmware(device, fwPath, 0)
-      
-      if (result && result.message === 'USB_PERMISSION_ERROR') {
-        state = 'ready'
-        errorMsg = t.UdevRulesRequired
-        if (isLinux) {
-          showUdevWarning = true
-        }
-        return
-      }
-      
-      if (result && result.success === true) {
-        state = 'success'
-      } else {
-        state = 'error'
-        errorMsg = result?.message || t.FlashOperationFailed
-      }
+
+      await FlashFirmware(device, fwPath, 0)
+
+      state = 'success'
     } catch (err) {
       state = 'error'
-      errorMsg = err?.message || t.CheckLogsForDetails
+      handleAppError(err, { showUdevHint: isLinux })
     }
   }
   
@@ -355,22 +376,7 @@
             </div>
 
             <!-- Action Buttons -->
-            {#if isLinux && showUdevWarning}
-              <!-- Udev Warning Block -->
-              <div class="alert alert-warning mb-2 py-3">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                <div class="flex-1 text-xs">
-                  <h3 class="font-semibold">{t.USBPermissionsRequired}</h3>
-                  <div class="mt-1">
-                    <button class="link link-hover" on:click={copyUdevRules}>{t.CopyRules}</button>
-                    {t.ThenPaste} <code class="text-xs bg-neutral-800 text-neutral-200 px-1 py-0.5 rounded">sudo tee /etc/udev/rules.d/50-sonix-keyboards.rules</code>
-                  </div>
-                </div>
-              </div>
-              <button class="btn btn-ghost btn-xs w-full mb-2" on:click={() => showUdevWarning = false}>
-                {t.ContinueAnyway}
-              </button>
-            {:else if device.isBootloader}
+            {#if device.isBootloader}
               <!-- Bootloader Mode: Select Keyboard Button -->
               <button class="btn btn-outline btn-lg w-full mb-2" on:click={() => showKeyboardSelectModal = true}>
                 {selectedFirmware ? t.ChangeKeyboard : t.SelectKeyboard}
@@ -437,14 +443,42 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
+
             <h3 class="text-lg font-light text-neutral-800 mb-2">
-              {errorMsg.includes('No device') || errorMsg.includes('not detected') ? t.NoDeviceFound : t.FlashFailed}
+              {errorMsg}
             </h3>
-            <p class="text-xs text-red-600 mb-4">{errorMsg}</p>
+
+            {#if isLinux && showUdevWarning}
+              <div class="alert alert-warning text-left max-w-xl mx-auto mb-4 py-3">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77-1.333.192-3 1.732-3z" />
+                </svg>
+
+                <div class="flex-1 text-xs">
+                  <h3 class="font-semibold">{t.USBPermissionsRequired}</h3>
+
+                  <div class="mt-1">
+                    <button class="link link-hover" on:click={copyUdevRules}>
+                      {t.CopyRules}
+                    </button>
+
+                    {t.ThenPaste}
+
+                    <code class="text-xs bg-neutral-800 text-neutral-200 px-1 py-0.5 rounded">
+                      sudo tee /etc/udev/rules.d/50-sonix-keyboards.rules
+                    </code>
+                  </div>
+                </div>
+              </div>
+            {/if}
+
+            <p class="text-xs text-red-600 mb-4">{t.CheckLogsForDetails}</p>
+
             <div class="flex gap-2 justify-center">
               <button class="btn btn-neutral" on:click={detectDevice}>
                 {t.TryAgain}
               </button>
+
               {#if logs.length > 0}
                 <button class="btn btn-ghost" on:click={() => showLogsModal = true}>
                   {t.ViewLogs}
