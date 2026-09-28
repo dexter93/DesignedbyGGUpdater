@@ -270,7 +270,7 @@
                 on:click={() => switchLanguage(lang.code)}
                 title={lang.name}
               >
-                {lang.flag}
+                <span class="emoji" aria-hidden="true">{lang.flag}</span>
               </button>
             {/each}
           </div>

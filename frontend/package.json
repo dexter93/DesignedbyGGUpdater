@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@sableclient/twemoji-font": "^1.0.4",
     "daisyui": "^4.7.2"
   },
   "devDependencies": {
