@@ -1,40 +1,71 @@
 <script>
-  import { DetectDevice, FlashFirmware, CheckUdevRules, GetUdevRulesContent, GetKeyboardImage, GetAppIcon, SelectFirmware, GetAvailableKeyboards, GetTranslations, GetAvailableLanguages, GetVersion } from '../wailsjs/go/main/App'
-  import { EventsOn } from '../wailsjs/runtime/runtime'
-  import { BrowserOpenURL } from '../wailsjs/runtime/runtime'
+  import {
+    DetectDevice,
+    FlashFirmware,
+    CheckUdevRules,
+    GetUdevRulesContent,
+    GetKeyboardImage,
+    GetAppIcon,
+    SelectFirmware,
+    GetAvailableKeyboards,
+    GetTranslations,
+    GetAvailableLanguages,
+    GetVersion
+  } from '../wailsjs/go/main/App'
+
+  import {
+    EventsOn,
+    BrowserOpenURL
+  } from '../wailsjs/runtime/runtime'
+
   import { onMount } from 'svelte'
 
-  let appVersion = ''
-  let currentLang = 'en'
-  let t = {}
-  let availableLanguages = []
-  let state = 'idle'
-  let device = null
-  let keyboardImage = ''
-  let appIcon = ''
-  let logs = []
-  let errorMsg = ''
-  let showLogsModal = false
-  let showKeyboardSelectModal = false
-  let showConfirmModal = false
-  let showAboutModal = false
-  let showUdevWarning = false
-  let isLinux = false
-  let selectedFirmware = ''
-  let selectedKeyboardModel = ''
-  let isCustomFirmware = false
-  let confirmationText = ''
-  let countdown = 15
-  let countdownInterval = null
-  let showModelSelectModal = false
-  let modelCandidates = []
-  let selectedModelIndex = null
-  let availableKeyboards = []
+  let appVersion = $state('')
+  let currentLang = $state('en')
+  let t = $state({})
+  let availableLanguages = $state([])
+  let state = $state('idle')
+  let device = $state(null)
+  let keyboardImage = $state('')
+  let appIcon = $state('')
+  let logs = $state([])
+  let errorMsg = $state('')
+  let showLogsModal = $state(false)
+  let showKeyboardSelectModal = $state(false)
+  let showConfirmModal = $state(false)
+  let showAboutModal = $state(false)
+  let showUdevWarning = $state(false)
+  let isLinux = $state(false)
+  let selectedFirmware = $state('')
+  let selectedKeyboardModel = $state('')
+  let isCustomFirmware = $state(false)
+  let confirmationText = $state('')
+  let countdown = $state(15)
+  let countdownInterval = $state(null)
+  let showModelSelectModal = $state(false)
+  let modelCandidates = $state([])
+  let selectedModelIndex = $state(null)
+  let availableKeyboards = $state([])
 
-  $: canFlash = state === 'ready' && device && !showUdevWarning && (device.isBootloader ? selectedFirmware : device.firmwarePath)
-  $: requiresConfirmation = !isCustomFirmware && !device?.isBootloader
-  $: confirmationMatch = !requiresConfirmation || confirmationText.trim() === selectedKeyboardModel
-  $: canProceed = countdown === 0 && confirmationMatch
+  let canFlash = $derived(
+    state === 'ready' &&
+    device &&
+    !showUdevWarning &&
+    (device.isBootloader ? selectedFirmware : device.firmwarePath)
+  )
+
+  let requiresConfirmation = $derived(
+    !isCustomFirmware && !device?.isBootloader
+  )
+
+  let confirmationMatch = $derived(
+    !requiresConfirmation ||
+    confirmationText.trim() === selectedKeyboardModel
+  )
+
+  let canProceed = $derived(
+    countdown === 0 && confirmationMatch
+  )
 
   onMount(async () => {
     logs = []
@@ -44,6 +75,14 @@
     availableLanguages = await GetAvailableLanguages()
     t = await GetTranslations(currentLang)
     appVersion = await GetVersion()
+  })
+
+  $effect(() => {
+    const unsubscribe = EventsOn('log', (logEntry) => {
+      logs = [...logs, logEntry]
+    })
+
+    return unsubscribe
   })
 
   async function switchLanguage(lang) {
@@ -111,8 +150,7 @@
 
     try {
       device = await DetectDevice()
-      
-      // Check if we have ambiguous device candidates
+
       if (device.candidates) {
         modelCandidates = JSON.parse(device.candidates)
         showModelSelectModal = true
@@ -120,18 +158,17 @@
         return
       }
 
-      // Extract model name FIRST (before loading image)
       if (!device.isBootloader && device.firmwarePath) {
         const match = device.firmwarePath.match(/([A-Z0-9]+)\.bin$/i)
+
         if (match) {
           selectedKeyboardModel = match[1]
         }
       }
-      
-      // Then load image
+
       keyboardImage = await GetKeyboardImage(device)
       state = 'ready'
-      
+
     } catch (err) {
       state = 'error'
       handleAppError(err, { showUdevHint: isLinux })
@@ -139,26 +176,26 @@
   }
 
   async function confirmModelSelection() {
-      if (selectedModelIndex === null) return
+    if (selectedModelIndex === null) return
 
-      const model = modelCandidates[selectedModelIndex]
+    const model = modelCandidates[selectedModelIndex]
 
-      if (!model.firmwarePath) {
-        showModelSelectModal = false
-        state = 'error'
-        errorMsg = t.NotCurrentlySupported
-        return
-      }
-
-      device.firmwarePath = model.firmwarePath
-      device.name = model.description
-      selectedKeyboardModel = model.name
-      device.candidates = ''
-      
+    if (!model.firmwarePath) {
       showModelSelectModal = false
-      
-      keyboardImage = await GetKeyboardImage(device)
-      state = 'ready'
+      state = 'error'
+      errorMsg = t.NotCurrentlySupported
+      return
+    }
+
+    device.firmwarePath = model.firmwarePath
+    device.name = model.description
+    selectedKeyboardModel = model.name
+    device.candidates = ''
+
+    showModelSelectModal = false
+
+    keyboardImage = await GetKeyboardImage(device)
+    state = 'ready'
   }
 
   async function selectKeyboard(keyboard) {
@@ -173,7 +210,7 @@
     selectedKeyboardModel = keyboard.name
     isCustomFirmware = false
     showKeyboardSelectModal = false
-    
+
     keyboardImage = await GetKeyboardImage({
       ...device,
       firmwarePath: keyboard.firmwarePath
@@ -182,8 +219,10 @@
 
   async function browseCustomFirmware() {
     showKeyboardSelectModal = false
+
     try {
       const path = await SelectFirmware()
+
       if (path) {
         selectedFirmware = path
         selectedKeyboardModel = path.split('/').pop().replace('.bin', '')
@@ -197,8 +236,10 @@
 
   function startCountdown() {
     countdown = 15
+
     countdownInterval = setInterval(() => {
       countdown--
+
       if (countdown <= 0) {
         clearInterval(countdownInterval)
         countdownInterval = null
@@ -208,7 +249,7 @@
 
   function openConfirmModal() {
     if (!canFlash) return
-    
+
     confirmationText = ''
     showConfirmModal = true
     startCountdown()
@@ -217,6 +258,7 @@
   function closeConfirmModal() {
     showConfirmModal = false
     confirmationText = ''
+
     if (countdownInterval) {
       clearInterval(countdownInterval)
       countdownInterval = null
@@ -225,18 +267,19 @@
 
   async function confirmAndFlash() {
     if (!canProceed) return
+
     closeConfirmModal()
     await flashDevice()
   }
 
   async function flashDevice() {
     if (!canFlash) return
-    
+
     state = 'flashing'
     logs = []
     errorMsg = ''
     showUdevWarning = false
-    
+
     try {
       const fwPath = device.isBootloader ? selectedFirmware : ''
 
@@ -248,7 +291,7 @@
       handleAppError(err, { showUdevHint: isLinux })
     }
   }
-  
+
   function reset() {
     state = 'idle'
     device = null
@@ -262,17 +305,17 @@
   }
 
   function getLogClass(level) {
-    switch(level) {
-      case 'success': return 'text-success'
-      case 'error': return 'text-error'
-      case 'warn': return 'text-warning'
-      default: return 'text-neutral/70'
+    switch (level) {
+      case 'success':
+        return 'text-success'
+      case 'error':
+        return 'text-error'
+      case 'warn':
+        return 'text-warning'
+      default:
+        return 'text-neutral/70'
     }
   }
-
-  EventsOn('log', (logEntry) => {
-    logs = [...logs, logEntry]
-  })
 </script>
 
 <div class="h-screen flex items-center justify-center bg-neutral-50" data-theme="light">
@@ -287,7 +330,7 @@
             {#each availableLanguages as lang}
               <button 
                 class="btn btn-sm {currentLang === lang.code ? 'btn-neutral' : 'btn-ghost'}"
-                on:click={() => switchLanguage(lang.code)}
+                onclick={() => switchLanguage(lang.code)}
                 title={lang.name}
               >
                 <span class="emoji" aria-hidden="true">{lang.flag}</span>
@@ -301,7 +344,7 @@
               <img src={appIcon} alt={t.AppTitle} class="w-full h-full object-contain rounded-lg" />
             </div>
             <p class="text-neutral-600 text-sm mb-6">{t.ConnectAndDetect}</p>
-            <button class="btn btn-neutral btn-wide" on:click={detectDevice}>
+            <button class="btn btn-neutral btn-wide" onclick={detectDevice}>
               {t.DetectDevice}
             </button>
           </div>
@@ -378,25 +421,25 @@
             <!-- Action Buttons -->
             {#if device.isBootloader}
               <!-- Bootloader Mode: Select Keyboard Button -->
-              <button class="btn btn-outline btn-lg w-full mb-2" on:click={() => showKeyboardSelectModal = true}>
+              <button class="btn btn-outline btn-lg w-full mb-2" onclick={() => showKeyboardSelectModal = true}>
                 {selectedFirmware ? t.ChangeKeyboard : t.SelectKeyboard}
               </button>
-              <button class="btn btn-neutral btn-lg w-full mb-2" on:click={openConfirmModal} disabled={!canFlash}>
+              <button class="btn btn-neutral btn-lg w-full mb-2" onclick={openConfirmModal} disabled={!canFlash}>
                 {t.FlashFirmware}
               </button>
             {:else}
               <!-- Application Mode: Direct Flash -->
-              <button class="btn btn-neutral btn-lg w-full mb-2" on:click={openConfirmModal}>
+              <button class="btn btn-neutral btn-lg w-full mb-2" onclick={openConfirmModal}>
                 {t.FlashFirmware}
               </button>
             {/if}
 
             <!-- Actions -->
             <div class="flex gap-2">
-              <button class="btn btn-ghost btn-sm flex-1 text-neutral-600" on:click={detectDevice}>
+              <button class="btn btn-ghost btn-sm flex-1 text-neutral-600" onclick={detectDevice}>
                 {t.DetectAgain}
               </button>
-              <button class="btn btn-ghost btn-sm flex-1 text-neutral-600" on:click={() => showLogsModal = true}>
+              <button class="btn btn-ghost btn-sm flex-1 text-neutral-600" onclick={() => showLogsModal = true}>
                 {t.ShowLogs}
               </button>
             </div>
@@ -412,7 +455,7 @@
             <p class="text-neutral-600">{t.FlashingFirmware}</p>
             <p class="text-xs text-neutral-400 mt-1">{t.DoNotDisconnect}</p>
             {#if logs.length > 0}
-              <button class="btn btn-ghost btn-sm mt-4" on:click={() => showLogsModal = true}>
+              <button class="btn btn-ghost btn-sm mt-4" onclick={() => showLogsModal = true}>
                 {t.ViewProgress}
               </button>
             {/if}
@@ -429,7 +472,7 @@
             </div>
             <h3 class="text-lg font-light text-neutral-800 mb-2">{t.FlashComplete}</h3>
             <p class="text-neutral-600 text-sm mb-4">{t.KeyboardWillReboot}</p>
-            <button class="btn btn-outline btn-wide" on:click={reset}>
+            <button class="btn btn-outline btn-wide" onclick={reset}>
               {t.FlashAnother}
             </button>
           </div>
@@ -458,7 +501,7 @@
                   <h3 class="font-semibold">{t.USBPermissionsRequired}</h3>
 
                   <div class="mt-1">
-                    <button class="link link-hover" on:click={copyUdevRules}>
+                    <button class="link link-hover" onclick={copyUdevRules}>
                       {t.CopyRules}
                     </button>
 
@@ -475,12 +518,12 @@
             <p class="text-xs text-red-600 mb-4">{t.CheckLogsForDetails}</p>
 
             <div class="flex gap-2 justify-center">
-              <button class="btn btn-neutral" on:click={detectDevice}>
+              <button class="btn btn-neutral" onclick={detectDevice}>
                 {t.TryAgain}
               </button>
 
               {#if logs.length > 0}
-                <button class="btn btn-ghost" on:click={() => showLogsModal = true}>
+                <button class="btn btn-ghost" onclick={() => showLogsModal = true}>
                   {t.ViewLogs}
                 </button>
               {/if}
@@ -493,9 +536,9 @@
 
     <!-- Footer -->
     <div class="text-center mt-3 text-xs text-neutral-400 pb-4">
-      Powered by <button class="link link-hover" on:click={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC')}>SonixFlasher</button>
+      Powered by <button class="link link-hover" onclick={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC')}>SonixFlasher</button>
       <span class="mx-2">·</span>
-      <button class="link link-hover" on:click={() => showAboutModal = true}>{t.About}</button>
+      <button class="link link-hover" onclick={() => showAboutModal = true}>{t.About}</button>
     </div>
 
   </div>
@@ -511,7 +554,7 @@
         {#each availableKeyboards as keyboard}
           <button 
             class="btn btn-outline w-full justify-start" 
-            on:click={() => selectKeyboard(keyboard)}
+            onclick={() => selectKeyboard(keyboard)}
           >
             <div class="text-left">
               <div class="font-semibold">{keyboard.name}</div>
@@ -522,13 +565,13 @@
         
         <div class="divider text-xs">or</div>
         
-        <button class="btn btn-ghost w-full" on:click={browseCustomFirmware}>
+        <button class="btn btn-ghost w-full" onclick={browseCustomFirmware}>
           {t.BrowseCustomFirmware}
         </button>
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-sm" on:click={() => showKeyboardSelectModal = false}>{t.Cancel}</button>
+        <button class="btn btn-sm" onclick={() => showKeyboardSelectModal = false}>{t.Cancel}</button>
       </div>
     </div>
   </div>
@@ -597,13 +640,13 @@
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
-          <button class="btn btn-ghost" on:click={closeConfirmModal}>
+          <button class="btn btn-ghost" onclick={closeConfirmModal}>
             {t.Cancel}
           </button>
 
           <button
             class="btn btn-error gap-2"
-            on:click={confirmAndFlash}
+            onclick={confirmAndFlash}
             disabled={!canProceed}
           >
             {#if countdown > 0}
@@ -658,11 +701,11 @@
         <div>
           <p class="font-semibold mb-1">{t.BuiltWith}</p>
           <div class="flex gap-2 flex-wrap text-xs">
-            <button on:click={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC')} class="badge badge-outline badge-sm link link-hover">SonixFlasher</button>
-            <button on:click={() => BrowserOpenURL('https://wails.io')} class="badge badge-outline badge-sm link link-hover">Wails v2</button>
-            <button on:click={() => BrowserOpenURL('https://go.dev')} class="badge badge-outline badge-sm link link-hover">Go</button>
-            <button on:click={() => BrowserOpenURL('https://svelte.dev')} class="badge badge-outline badge-sm link link-hover">Svelte</button>
-            <button on:click={() => BrowserOpenURL('https://daisyui.com')} class="badge badge-outline badge-sm link link-hover">DaisyUI</button>
+            <button onclick={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC')} class="badge badge-outline badge-sm link link-hover">SonixFlasher</button>
+            <button onclick={() => BrowserOpenURL('https://wails.io')} class="badge badge-outline badge-sm link link-hover">Wails v2</button>
+            <button onclick={() => BrowserOpenURL('https://go.dev')} class="badge badge-outline badge-sm link link-hover">Go</button>
+            <button onclick={() => BrowserOpenURL('https://svelte.dev')} class="badge badge-outline badge-sm link link-hover">Svelte</button>
+            <button onclick={() => BrowserOpenURL('https://daisyui.com')} class="badge badge-outline badge-sm link link-hover">DaisyUI</button>
           </div>
         </div>
 
@@ -670,20 +713,20 @@
             <p class="font-semibold mb-1">{t.Links}</p>
             <div class="space-y-1 text-xs">
               <div>
-                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater')} class="link link-hover">{t.GitHubRepository}</button>
+                <button onclick={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater')} class="link link-hover">{t.GitHubRepository}</button>
               </div>
               <div>
-                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/issues')} class="link link-hover">{t.ReportIssue}</button>
+                <button onclick={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/issues')} class="link link-hover">{t.ReportIssue}</button>
               </div>
               <div>
-                <button on:click={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/blob/master/LICENSE')} class="link link-hover">{t.ViewLicense}</button>
+                <button onclick={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/blob/master/LICENSE')} class="link link-hover">{t.ViewLicense}</button>
               </div>
             </div>
           </div>
         </div>
 
       <div class="modal-action">
-        <button class="btn btn-sm" on:click={() => showAboutModal = false}>{t.Close}</button>
+        <button class="btn btn-sm" onclick={() => showAboutModal = false}>{t.Close}</button>
       </div>
     </div>
   </div>
@@ -696,7 +739,7 @@
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-light text-xl text-neutral-800">{t.ConsoleOutput}</h3>
         {#if logs.length > 0}
-          <button class="btn btn-sm btn-ghost" on:click={() => {
+          <button class="btn btn-sm btn-ghost" onclick={() => {
             const text = logs.map(l => `[${l.timestamp}] ${l.message}`).join('\n')
             navigator.clipboard.writeText(text)
           }}>
@@ -724,7 +767,7 @@
       {/if}
 
       <div class="modal-action">
-        <button class="btn btn-sm" on:click={() => showLogsModal = false}>{t.Close}</button>
+        <button class="btn btn-sm" onclick={() => showLogsModal = false}>{t.Close}</button>
       </div>
     </div>
   </div>
@@ -743,7 +786,7 @@
         {#each modelCandidates as model, index}
           <button 
             class="card border-2 transition-all overflow-hidden {selectedModelIndex === index ? 'border-neutral-800 bg-neutral-50' : 'border-neutral-200 hover:border-neutral-400'}"
-            on:click={() => selectedModelIndex = index}
+            onclick={() => selectedModelIndex = index}
           >
             <div class="card-body p-0">
               <div class="w-full h-56 bg-neutral-100">
@@ -786,12 +829,12 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-ghost" on:click={() => { showModelSelectModal = false; state = 'idle'; device = null; selectedModelIndex = null; }}>
+        <button class="btn btn-ghost" onclick={() => { showModelSelectModal = false; state = 'idle'; device = null; selectedModelIndex = null; }}>
           {t.Cancel}
         </button>
         <button 
           class="btn btn-neutral" 
-          on:click={confirmModelSelection}
+          onclick={confirmModelSelection}
           disabled={selectedModelIndex === null}
         >
           {t.ConfirmSelection}
