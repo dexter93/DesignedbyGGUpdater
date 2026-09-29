@@ -2,7 +2,6 @@
   import {
     DetectDevice,
     FlashFirmware,
-    CheckUdevRules,
     GetUdevRulesContent,
     GetKeyboardImage,
     GetAppIcon,
@@ -313,15 +312,15 @@
       case 'warn':
         return 'text-warning'
       default:
-        return 'text-neutral/70'
+        return 'text-base-content/70'
     }
   }
 </script>
 
-<div class="h-screen flex items-center justify-center bg-neutral-50" data-theme="light">
+<div class="min-h-screen flex items-center justify-center bg-base-200">
   <div class="w-full max-w-5xl px-6">
     <!-- Main Card -->
-    <div class="card bg-white shadow-xl border border-neutral-200 relative">
+    <div class="card bg-base-100 shadow-xl border border-base-300 relative">
       <div class="card-body p-6">
         
         {#if !device && state === 'idle'}
@@ -340,10 +339,10 @@
 
           <!-- Initial State -->
           <div class="text-center py-16">
-            <div class="w-20 h-20 mx-auto mb-4 bg-neutral-100 rounded-full flex items-center justify-center">
+            <div class="w-20 h-20 mx-auto mb-4 bg-base-200 rounded-full flex items-center justify-center">
               <img src={appIcon} alt={t.AppTitle} class="w-full h-full object-contain rounded-lg" />
             </div>
-            <p class="text-neutral-600 text-sm mb-6">{t.ConnectAndDetect}</p>
+            <p class="text-base-content/70 text-sm mb-6">{t.ConnectAndDetect}</p>
             <button class="btn btn-neutral btn-wide" onclick={detectDevice}>
               {t.DetectDevice}
             </button>
@@ -353,8 +352,8 @@
         {#if state === 'detecting'}
           <!-- Detecting State -->
           <div class="text-center py-16">
-            <span class="loading loading-spinner loading-lg mb-3 text-neutral-600"></span>
-            <p class="text-neutral-600 text-sm">{t.Scanning}</p>
+            <span class="loading loading-spinner loading-lg mb-3 text-base-content/70"></span>
+            <p class="text-base-content/70 text-sm">{t.Scanning}</p>
           </div>
         {/if}
 
@@ -367,8 +366,8 @@
                 {#if keyboardImage}
                   <img src={keyboardImage} alt={device.name} class="w-full h-auto object-contain" />
                 {:else}
-                  <div class="w-full h-56 flex items-center justify-center bg-neutral-50 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div class="w-full h-56 flex items-center justify-center bg-base-200 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                     </svg>
                   </div>
@@ -377,30 +376,30 @@
 
               <!-- Right Column: Device Info -->
               <div class="flex flex-col justify-center">
-                <h2 class="text-2xl font-light text-neutral-800 mb-3">{device.name}</h2>
-                <div class="space-y-1.5 text-sm text-neutral-600">
+                <h2 class="text-2xl font-light text-base-content mb-3">{device.name}</h2>
+                <div class="space-y-1.5 text-sm text-base-content/70">
                   <div class="flex justify-between border-b border-neutral-100 pb-1.5">
-                    <span class="text-neutral-500">VID</span>
+                    <span class="text-base-content/60">VID</span>
                     <span class="font-mono">0x{device.vid}</span>
                   </div>
                   <div class="flex justify-between border-b border-neutral-100 pb-1.5">
-                    <span class="text-neutral-500">PID</span>
+                    <span class="text-base-content/60">PID</span>
                     <span class="font-mono">0x{device.pid}</span>
                   </div>
                   {#if device.manufacturer}
                     <div class="flex justify-between border-b border-neutral-100 pb-1.5">
-                      <span class="text-neutral-500">{t.Manufacturer}</span>
+                      <span class="text-base-content/60">{t.Manufacturer}</span>
                       <span>{device.manufacturer}</span>
                     </div>
                   {/if}
                   {#if device.product}
                     <div class="flex justify-between border-b border-neutral-100 pb-1.5">
-                      <span class="text-neutral-500">{t.Product}</span>
+                      <span class="text-base-content/60">{t.Product}</span>
                       <span>{device.product}</span>
                     </div>
                   {/if}
                   <div class="flex justify-between pt-1.5">
-                    <span class="text-neutral-500">{t.Mode}</span>
+                    <span class="text-base-content/60">{t.Mode}</span>
                     {#if !device.isBootloader}
                       <span class="badge badge-warning badge-sm">{t.ApplicationMode}</span>
                     {:else}
@@ -410,7 +409,7 @@
                   
                   {#if device.isBootloader && selectedFirmware}
                     <div class="flex justify-between border-t border-neutral-100 pt-1.5 mt-2">
-                      <span class="text-neutral-500">{t.Firmware}</span>
+                      <span class="text-base-content/60">{t.Firmware}</span>
                       <span class="text-xs text-success font-mono">{selectedKeyboardModel}</span>
                     </div>
                   {/if}
@@ -436,10 +435,10 @@
 
             <!-- Actions -->
             <div class="flex gap-2">
-              <button class="btn btn-ghost btn-sm flex-1 text-neutral-600" onclick={detectDevice}>
+              <button class="btn btn-ghost btn-sm flex-1 text-base-content/70" onclick={detectDevice}>
                 {t.DetectAgain}
               </button>
-              <button class="btn btn-ghost btn-sm flex-1 text-neutral-600" onclick={() => showLogsModal = true}>
+              <button class="btn btn-ghost btn-sm flex-1 text-base-content/70" onclick={() => showLogsModal = true}>
                 {t.ShowLogs}
               </button>
             </div>
@@ -450,10 +449,10 @@
           <!-- Flashing State -->
           <div class="text-center py-16">
             <div class="mb-3 flex justify-center">
-              <span class="loading loading-spinner loading-lg text-neutral-600"></span>
+              <span class="loading loading-spinner loading-lg text-base-content/70"></span>
             </div>
-            <p class="text-neutral-600">{t.FlashingFirmware}</p>
-            <p class="text-xs text-neutral-400 mt-1">{t.DoNotDisconnect}</p>
+            <p class="text-base-content/70">{t.FlashingFirmware}</p>
+            <p class="text-xs text-base-content/50 mt-1">{t.DoNotDisconnect}</p>
             {#if logs.length > 0}
               <button class="btn btn-ghost btn-sm mt-4" onclick={() => showLogsModal = true}>
                 {t.ViewProgress}
@@ -465,13 +464,13 @@
         {#if state === 'success'}
           <!-- Success State -->
           <div class="text-center py-16">
-            <div class="w-20 h-20 mx-auto mb-4 bg-green-50 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="w-20 h-20 mx-auto mb-4 bg-success/10 rounded-full flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 class="text-lg font-light text-neutral-800 mb-2">{t.FlashComplete}</h3>
-            <p class="text-neutral-600 text-sm mb-4">{t.KeyboardWillReboot}</p>
+            <h3 class="text-lg font-light text-base-content mb-2">{t.FlashComplete}</h3>
+            <p class="text-base-content/70 text-sm mb-4">{t.KeyboardWillReboot}</p>
             <button class="btn btn-outline btn-wide" onclick={reset}>
               {t.FlashAnother}
             </button>
@@ -482,12 +481,12 @@
           <!-- Error State -->
           <div class="text-center py-16">
             <div class="w-20 h-20 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
 
-            <h3 class="text-lg font-light text-neutral-800 mb-2">
+            <h3 class="text-lg font-light text-base-content mb-2">
               {errorMsg}
             </h3>
 
@@ -507,7 +506,7 @@
 
                     {t.ThenPaste}
 
-                    <code class="text-xs bg-neutral-800 text-neutral-200 px-1 py-0.5 rounded">
+                    <code class="badge badge-neutral badge-sm">
                       sudo tee /etc/udev/rules.d/50-sonix-keyboards.rules
                     </code>
                   </div>
@@ -515,7 +514,7 @@
               </div>
             {/if}
 
-            <p class="text-xs text-red-600 mb-4">{t.CheckLogsForDetails}</p>
+            <p class="text-xs text-error mb-4">{t.CheckLogsForDetails}</p>
 
             <div class="flex gap-2 justify-center">
               <button class="btn btn-neutral" onclick={detectDevice}>
@@ -535,7 +534,7 @@
     </div>
 
     <!-- Footer -->
-    <div class="text-center mt-3 text-xs text-neutral-400 pb-4">
+    <div class="text-center mt-3 text-xs text-base-content/50 pb-4">
       Powered by <button class="link link-hover" onclick={() => BrowserOpenURL('https://github.com/SonixQMK/SonixFlasherC')}>SonixFlasher</button>
       <span class="mx-2">·</span>
       <button class="link link-hover" onclick={() => showAboutModal = true}>{t.About}</button>
@@ -547,8 +546,8 @@
 <!-- Keyboard Selection Modal -->
 {#if showKeyboardSelectModal}
   <div class="modal modal-open">
-    <div class="modal-box bg-white">
-      <h3 class="font-light text-xl mb-4 text-neutral-800">{t.SelectKeyboard}</h3>
+    <div class="modal-box bg-base-100">
+      <h3 class="font-light text-xl mb-4 text-base-content">{t.SelectKeyboard}</h3>
       
       <div class="space-y-2">
         {#each availableKeyboards as keyboard}
@@ -580,7 +579,7 @@
 <!-- Confirmation Modal -->
 {#if showConfirmModal}
   <div class="modal modal-open">
-    <div class="modal-box bg-white max-w-md">
+    <div class="modal-box bg-base-100 max-w-md">
       <h3 class="font-bold text-xl text-error mb-4 flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 fill-current" viewBox="0 0 24 24">
           <path d="M12 2.5a2 2 0 0 1 1.732 1l9 15.588A2 2 0 0 1 21 22H3a2 2 0 0 1-1.732-2.912l9-15.588A2 2 0 0 1 12 2.5z M11 9v5h2V9h-2zm0 7v2h2v-2h-2z" fill-rule="evenodd" clip-rule="evenodd"/>
@@ -599,7 +598,7 @@
       </div>
 
       <div class="mb-4">
-        <p class="text-sm text-neutral-600 mb-2">
+        <p class="text-sm text-base-content/70 mb-2">
           {#if isCustomFirmware}
             {t.AboutToFlashCustom}
           {:else}
@@ -613,7 +612,7 @@
           <label class="label" for="confirmation-input">
             <span class="label-text text-sm">
               {t.TypePrefix}
-              <code class="font-bold bg-neutral-200 px-1 rounded">{selectedKeyboardModel}</code>
+              <code class="font-bold bg-base-300 px-1 rounded">{selectedKeyboardModel}</code>
               {t.TypeSuffix}
             </span>
           </label>
@@ -629,7 +628,7 @@
       {/if}
 
       <div class="flex items-center justify-between gap-4">
-        <div class="text-sm text-neutral-600 min-w-0">
+        <div class="text-sm text-base-content/70 min-w-0">
           {#if countdown > 0}
             {t.PleaseWaitPrefix} {countdown} {countdown !== 1 ? t.Seconds : t.Second}{t.PleaseWaitSuffix}
           {:else if requiresConfirmation && !confirmationMatch}
@@ -669,24 +668,24 @@
 <!-- About Modal -->
 {#if showAboutModal}
   <div class="modal modal-open">
-    <div class="modal-box bg-white max-w-md">
+    <div class="modal-box bg-base-100 max-w-md">
       <div class="text-center mb-6">
         <div class="w-20 h-20 mx-auto mb-3">
           {#if appIcon}
             <img src={appIcon} alt={t.AppTitle} class="w-full h-full object-contain rounded-lg" />
           {:else}
-            <div class="w-full h-full bg-neutral-100 rounded-lg flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="w-full h-full bg-base-200 rounded-lg flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
               </svg>
             </div>
           {/if}
         </div>
-        <h2 class="text-2xl font-light text-neutral-800 mb-1">{t.AppTitle}</h2>
-        <p class="text-sm text-neutral-500">Version {appVersion}</p>
+        <h2 class="text-2xl font-light text-base-content mb-1">{t.AppTitle}</h2>
+        <p class="text-sm text-base-content/60">Version {appVersion}</p>
       </div>
 
-      <div class="space-y-4 text-sm text-neutral-600">
+      <div class="space-y-4 text-sm text-base-content/70">
         <div>
           <p class="font-semibold mb-1">{t.About}</p>
           <p class="text-xs">{t.AppDescription}</p>
@@ -735,9 +734,9 @@
 <!-- Logs Modal -->
 {#if showLogsModal}
   <div class="modal modal-open">
-    <div class="modal-box max-w-4xl bg-white">
+    <div class="modal-box max-w-4xl bg-base-100">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-light text-xl text-neutral-800">{t.ConsoleOutput}</h3>
+        <h3 class="font-light text-xl text-base-content">{t.ConsoleOutput}</h3>
         {#if logs.length > 0}
           <button class="btn btn-sm btn-ghost" onclick={() => {
             const text = logs.map(l => `[${l.timestamp}] ${l.message}`).join('\n')
@@ -752,9 +751,9 @@
       </div>
       
       {#if logs.length === 0}
-        <p class="text-center text-neutral-500 py-8">{t.NoLogsAvailable}</p>
+        <p class="text-center text-base-content/60 py-8">{t.NoLogsAvailable}</p>
       {:else}
-        <div class="bg-neutral-50 rounded-lg p-4 max-h-96 overflow-y-auto border border-neutral-200">
+        <div class="bg-base-200 rounded-lg p-4 max-h-96 overflow-y-auto border border-neutral-200">
           <div class="font-mono text-xs space-y-0.5">
             {#each logs as log}
               <div class={getLogClass(log.level)}>
@@ -775,25 +774,25 @@
 
 {#if showModelSelectModal}
   <div class="modal modal-open">
-    <div class="modal-box bg-white max-w-4xl">
-      <h3 class="font-light text-xl mb-4 text-neutral-800">{t.SelectYourKeyboard}</h3>
+    <div class="modal-box bg-base-100 max-w-4xl">
+      <h3 class="font-light text-xl mb-4 text-base-content">{t.SelectYourKeyboard}</h3>
       
-      <p class="text-sm text-neutral-600 mb-6">
+      <p class="text-sm text-base-content/70 mb-6">
         {t.MultipleModelsDetected}
       </p>
 
       <div class="grid grid-cols-2 gap-4 mb-6">
         {#each modelCandidates as model, index}
           <button 
-            class="card border-2 transition-all overflow-hidden {selectedModelIndex === index ? 'border-neutral-800 bg-neutral-50' : 'border-neutral-200 hover:border-neutral-400'}"
+            class="card border-2 transition-all overflow-hidden {selectedModelIndex === index ? 'border-neutral-800 bg-base-200' : 'border-neutral-200 hover:border-neutral-400'}"
             onclick={() => selectedModelIndex = index}
           >
             <div class="card-body p-0">
-              <div class="w-full h-56 bg-neutral-100">
+              <div class="w-full h-56 bg-base-200">
                 {#if model.firmwarePath}
                   {#await GetKeyboardImage({...device, firmwarePath: model.firmwarePath})}
                     <div class="w-full h-full flex items-center justify-center">
-                      <span class="loading loading-spinner loading-md text-neutral-400"></span>
+                      <span class="loading loading-spinner loading-md text-base-content/50"></span>
                     </div>
                   {:then imageData}
                     <img src={imageData} alt={model.description} class="w-full h-full object-cover" />
@@ -801,13 +800,13 @@
                 {:else}
                   {#await GetKeyboardImage({...device, firmwarePath: '', name: model.description})}
                     <div class="w-full h-full flex items-center justify-center">
-                      <span class="loading loading-spinner loading-md text-neutral-400"></span>
+                      <span class="loading loading-spinner loading-md text-base-content/50"></span>
                     </div>
                   {:then imageData}
                     {#if imageData}
                       <img src={imageData} alt={model.description} class="w-full h-full object-cover" />
                     {:else}
-                      <div class="w-full h-full flex items-center justify-center text-neutral-300 bg-neutral-50">
+                      <div class="w-full h-full flex items-center justify-center text-base-content/40 bg-base-200">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
@@ -817,8 +816,8 @@
                 {/if}
               </div>
               <div class="text-left p-4">
-                <div class="font-bold text-neutral-800 mb-1">{model.name}</div>
-                <div class="text-xs text-neutral-600 mb-2">{model.description}</div>
+                <div class="font-bold text-base-content mb-1">{model.name}</div>
+                <div class="text-xs text-base-content/70 mb-2">{model.description}</div>
                 {#if !model.firmwarePath}
                   <div class="badge badge-warning badge-sm">{t.ComingSoon}</div>
                 {/if}
@@ -850,8 +849,5 @@
     padding: 0;
     overflow: hidden;
   }
-  
-  :global(html) {
-    background: #fafafa;
-  }
+ 
 </style>
