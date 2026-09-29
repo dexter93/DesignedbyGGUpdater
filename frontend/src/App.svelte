@@ -321,7 +321,7 @@
   <div class="w-full max-w-5xl px-6">
     <!-- Main Card -->
     <div class="card bg-base-100 shadow-xl border border-base-300 relative">
-      <div class="card-body p-6">
+      <div class="card-body min-h-[400px] p-6 flex flex-col">
         
         {#if !device && state === 'idle'}
           <!-- Language Toggle - Top Right -->
@@ -344,28 +344,38 @@
           </div>
 
           <!-- Initial State -->
-          <div class="text-center py-16">
-            <div class="w-20 h-20 mx-auto mb-4 bg-base-200 rounded-full flex items-center justify-center">
-              <img src={appIcon} alt={t.AppTitle} class="w-full h-full object-contain rounded-lg" />
+          <div class="flex flex-1 items-center justify-center">
+            <div class="flex flex-col items-center text-center">
+              <div class="w-20 h-20 mb-4 bg-base-200 rounded-full flex items-center justify-center">
+                <img
+                  src={appIcon}
+                  alt={t.AppTitle}
+                  class="w-full h-full object-contain rounded-lg"
+                />
+              </div>
+              <p class="text-base-content/70 text-sm mb-6">
+                {t.ConnectAndDetect}
+              </p>
+              <button class="btn btn-neutral btn-wide" onclick={detectDevice}>
+                {t.DetectDevice}
+              </button>
             </div>
-            <p class="text-base-content/70 text-sm mb-6">{t.ConnectAndDetect}</p>
-            <button class="btn btn-neutral btn-wide" onclick={detectDevice}>
-              {t.DetectDevice}
-            </button>
           </div>
         {/if}
 
         {#if state === 'detecting'}
           <!-- Detecting State -->
-          <div class="text-center py-16">
-            <span class="loading loading-spinner loading-lg mb-3 text-base-content/70"></span>
-            <p class="text-base-content/70 text-sm">{t.Scanning}</p>
+          <div class="flex flex-1 items-center justify-center">
+            <div class="flex flex-col items-center text-center">
+              <span class="loading loading-spinner loading-lg mb-3 text-base-content/70"></span>
+              <p class="text-base-content/70 text-sm">{t.Scanning}</p>
+            </div>
           </div>
         {/if}
 
         {#if device && state === 'ready'}
           <!-- Device Detected -->
-          <div>
+          <div class="flex-1">
             <div class="grid grid-cols-2 gap-6 mb-4">
               <!-- Left Column: Keyboard Image -->
               <div class="flex items-center justify-center">
@@ -453,85 +463,101 @@
 
         {#if state === 'flashing'}
           <!-- Flashing State -->
-          <div class="text-center py-16">
-            <div class="mb-3 flex justify-center">
-              <span class="loading loading-spinner loading-lg text-base-content/70"></span>
+          <div class="flex flex-1 items-center justify-center">
+            <div class="flex flex-col items-center text-center">
+              <div class="w-20 h-20 mb-4 bg-base-200 rounded-full flex items-center justify-center">
+                <span class="loading loading-spinner loading-lg text-base-content/70"></span>
+              </div>
+
+              <h3 class="text-lg font-light text-base-content mb-2">
+                {t.FlashingFirmware}
+              </h3>
+
+              <p class="text-base-content/70 text-sm mb-4">
+                {t.DoNotDisconnect}
+              </p>
+
+              {#if logs.length > 0}
+                <button class="btn btn-ghost btn-wide" onclick={() => showLogsModal = true}>
+                  {t.ViewProgress}
+                </button>
+              {/if}
             </div>
-            <p class="text-base-content/70">{t.FlashingFirmware}</p>
-            <p class="text-xs text-base-content/50 mt-1">{t.DoNotDisconnect}</p>
-            {#if logs.length > 0}
-              <button class="btn btn-ghost btn-sm mt-4" onclick={() => showLogsModal = true}>
-                {t.ViewProgress}
-              </button>
-            {/if}
           </div>
         {/if}
 
+
         {#if state === 'success'}
           <!-- Success State -->
-          <div class="text-center py-16">
-            <div class="w-20 h-20 mx-auto mb-4 bg-success/10 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
+          <div class="flex flex-1 items-center justify-center">
+            <div class="flex flex-col items-center text-center">
+              <div class="w-20 h-20 mb-4 bg-success/10 rounded-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+
+              <h3 class="text-lg font-light text-base-content mb-2">{t.FlashComplete}</h3>
+              <p class="text-base-content/70 text-sm mb-4">{t.KeyboardWillReboot}</p>
+
+              <button class="btn btn-outline btn-wide" onclick={reset}>
+                {t.FlashAnother}
+              </button>
             </div>
-            <h3 class="text-lg font-light text-base-content mb-2">{t.FlashComplete}</h3>
-            <p class="text-base-content/70 text-sm mb-4">{t.KeyboardWillReboot}</p>
-            <button class="btn btn-outline btn-wide" onclick={reset}>
-              {t.FlashAnother}
-            </button>
           </div>
         {/if}
 
         {#if state === 'error'}
           <!-- Error State -->
-          <div class="text-center py-16">
-            <div class="w-20 h-20 mx-auto mb-4 bg-error/10 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
+          <div class="flex flex-1 items-center justify-center">
+            <div class="flex flex-col items-center text-center w-full">
+              <div class="w-20 h-20 mb-4 bg-error/10 rounded-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
 
-            <h3 class="text-lg font-light text-base-content mb-2">
-              {errorMsg}
-            </h3>
+              <h3 class="text-lg font-light text-base-content mb-2">
+                {errorMsg}
+              </h3>
 
-            {#if isLinux && showUdevWarning}
-              <div class="alert alert-warning text-left max-w-xl mx-auto mb-4 py-3">
+              {#if isLinux && showUdevWarning}
+                <div class="alert alert-warning text-left max-w-xl mx-auto mb-4 py-3">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
 
-                <div class="flex-1 text-xs">
-                  <h3 class="font-semibold">{t.USBPermissionsRequired}</h3>
+                  <div class="flex-1 text-xs">
+                    <h3 class="font-semibold">{t.USBPermissionsRequired}</h3>
 
-                  <div class="mt-1">
-                    <button class="link link-hover" onclick={copyUdevRules}>
-                      {t.CopyRules}
-                    </button>
+                    <div class="mt-1">
+                      <button class="link link-hover" onclick={copyUdevRules}>
+                        {t.CopyRules}
+                      </button>
 
-                    {t.ThenPaste}
+                      {t.ThenPaste}
 
-                    <code class="badge badge-neutral badge-sm">
-                      sudo tee /etc/udev/rules.d/50-sonix-keyboards.rules
-                    </code>
+                      <code class="badge badge-neutral badge-sm">
+                        sudo tee /etc/udev/rules.d/50-sonix-keyboards.rules
+                      </code>
+                    </div>
                   </div>
                 </div>
-              </div>
-            {/if}
-
-            <p class="text-xs text-error mb-4">{t.CheckLogsForDetails}</p>
-
-            <div class="flex gap-2 justify-center">
-              <button class="btn btn-neutral" onclick={detectDevice}>
-                {t.TryAgain}
-              </button>
-
-              {#if logs.length > 0}
-                <button class="btn btn-ghost" onclick={() => showLogsModal = true}>
-                  {t.ViewLogs}
-                </button>
               {/if}
+
+              <p class="text-xs text-error mb-4">{t.CheckLogsForDetails}</p>
+
+              <div class="flex gap-2 justify-center">
+                <button class="btn btn-neutral" onclick={detectDevice}>
+                  {t.TryAgain}
+                </button>
+
+                {#if logs.length > 0}
+                  <button class="btn btn-ghost" onclick={() => showLogsModal = true}>
+                    {t.ViewLogs}
+                  </button>
+                {/if}
+              </div>
             </div>
           </div>
         {/if}
@@ -594,9 +620,9 @@
       </h3>
       
       <div class="alert alert-error mb-4">
-       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
-           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-         </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
         <div class="text-sm">
           <p class="font-bold">{t.DangerousOperation}</p>
           <p class="text-xs mt-1">{t.FlashingWrongFirmware}</p>
@@ -615,7 +641,7 @@
 
       {#if requiresConfirmation}
         <div class="form-control mb-4">
-          <label class="label" for="confirmation-input">
+          <label class="label mb-2" for="confirmation-input">
             <span class="label-text text-sm">
               {t.TypePrefix}
               <code class="font-bold bg-base-300 px-1 rounded">{selectedKeyboardModel}</code>
@@ -726,21 +752,21 @@
           </div>
         </div>
 
-          <div>
-            <p class="font-semibold mb-1">{t.Links}</p>
-            <div class="space-y-1 text-xs">
-              <div>
-                <button onclick={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater')} class="link link-hover">{t.GitHubRepository}</button>
-              </div>
-              <div>
-                <button onclick={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/issues')} class="link link-hover">{t.ReportIssue}</button>
-              </div>
-              <div>
-                <button onclick={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/blob/master/LICENSE')} class="link link-hover">{t.ViewLicense}</button>
-              </div>
+        <div>
+          <p class="font-semibold mb-1">{t.Links}</p>
+          <div class="space-y-1 text-xs">
+            <div>
+              <button onclick={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater')} class="link link-hover">{t.GitHubRepository}</button>
+            </div>
+            <div>
+              <button onclick={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/issues')} class="link link-hover">{t.ReportIssue}</button>
+            </div>
+            <div>
+              <button onclick={() => BrowserOpenURL('https://github.com/dexter93/DesignedbyGGUpdater/blob/master/LICENSE')} class="link link-hover">{t.ViewLicense}</button>
             </div>
           </div>
         </div>
+      </div>
 
       <div class="modal-action">
         <button class="btn btn-sm" onclick={() => showAboutModal = false}>{t.Close}</button>
@@ -761,7 +787,7 @@
             navigator.clipboard.writeText(text)
           }}>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 002 2v8a2 2 0 002 2z" />
             </svg>
             {t.Copy}
           </button>
@@ -821,7 +847,7 @@
                     {:else}
                       <div class="w-full h-full flex items-center justify-center text-base-content/40 bg-base-200">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6v12a2 2 0 002 2z" />
                         </svg>
                       </div>
                     {/if}
