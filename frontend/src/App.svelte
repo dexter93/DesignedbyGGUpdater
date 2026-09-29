@@ -312,7 +312,7 @@
       case 'warn':
         return 'text-warning'
       default:
-        return 'text-base-content/70'
+        return 'text-primary-content/80'
     }
   }
 </script>
@@ -765,15 +765,10 @@
       {#if logs.length === 0}
         <p class="text-center text-base-content/60 py-8">{t.NoLogsAvailable}</p>
       {:else}
-        <div class="bg-base-200 rounded-lg p-4 max-h-96 overflow-y-auto border border-neutral-200">
-          <div class="font-mono text-xs space-y-0.5">
-            {#each logs as log}
-              <div class={getLogClass(log.level)}>
-                <span class="opacity-50">{log.timestamp}</span>
-                <span class="ml-2">{log.message}</span>
-              </div>
-            {/each}
-          </div>
+        <div class="mockup-code max-h-96 overflow-y-auto text-sm">
+          {#each logs as log}
+            <pre class={getLogClass(log.level)}><code><span class="opacity-60">{log.timestamp}</span> {log.message}</code></pre>
+          {/each}
         </div>
       {/if}
 
