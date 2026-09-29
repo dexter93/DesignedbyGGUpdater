@@ -45,6 +45,38 @@
   let modelCandidates = $state([])
   let selectedModelIndex = $state(null)
   let availableKeyboards = $state([])
+  let theme = $state('light')
+  let iconTapCount = $state(0)
+  let iconTapTimer = $state(null)
+
+  function handleIconTap() {
+    iconTapCount++
+
+    if (iconTapTimer) {
+      clearTimeout(iconTapTimer)
+    }
+
+    if (iconTapCount >= 3) {
+      setTheme(theme === 'light' ? 'dark' : 'light')
+      iconTapCount = 0
+      return
+    }
+
+    iconTapTimer = setTimeout(() => {
+      iconTapCount = 0
+      iconTapTimer = null
+    }, 1000)
+  }
+
+  function setTheme(newTheme) {
+    theme = newTheme
+    document.documentElement.setAttribute('data-theme', newTheme)
+    localStorage.setItem('theme', newTheme)
+  }
+
+  function toggleTheme() {
+    setTheme(theme === 'light' ? 'dark' : 'light')
+  }
 
   let canFlash = $derived(
     state === 'ready' &&
@@ -74,6 +106,8 @@
     availableLanguages = await GetAvailableLanguages()
     t = await GetTranslations(currentLang)
     appVersion = await GetVersion()
+    const savedTheme = localStorage.getItem('theme')
+    setTheme(savedTheme || 'light')
   })
 
   $effect(() => {
@@ -346,13 +380,17 @@
           <!-- Initial State -->
           <div class="flex flex-1 items-center justify-center">
             <div class="flex flex-col items-center text-center">
-              <div class="w-20 h-20 mb-4 bg-base-200 rounded-full flex items-center justify-center">
+              <button
+                type="button"
+                class="w-20 h-20 mb-4 bg-base-100 rounded-full flex items-center justify-center"
+                onclick={handleIconTap}
+              >
                 <img
                   src={appIcon}
                   alt={t.AppTitle}
                   class="w-full h-full object-contain rounded-lg"
                 />
-              </div>
+              </button>
               <p class="text-base-content/70 text-sm mb-6">
                 {t.ConnectAndDetect}
               </p>
