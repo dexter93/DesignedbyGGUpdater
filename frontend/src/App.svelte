@@ -325,16 +325,22 @@
         
         {#if !device && state === 'idle'}
           <!-- Language Toggle - Top Right -->
-          <div class="absolute top-4 right-4 flex gap-2">
-            {#each availableLanguages as lang}
-              <button 
-                class="btn btn-sm {currentLang === lang.code ? 'btn-neutral' : 'btn-ghost'}"
-                onclick={() => switchLanguage(lang.code)}
-                title={lang.name}
-              >
-                <span class="emoji" aria-hidden="true">{lang.flag}</span>
-              </button>
-            {/each}
+          <div class="absolute top-4 right-4">
+            <div role="tablist" class="tabs tabs-box tabs-sm">
+              {#each availableLanguages as lang}
+                <button
+                  type="button"
+                  role="tab"
+                  class="tab text-xl px-3 {currentLang === lang.code ? 'tab-active' : ''}"
+                  onclick={() => switchLanguage(lang.code)}
+                  title={lang.name}
+                  aria-label={lang.name}
+                  aria-selected={currentLang === lang.code}
+                >
+                  <span aria-hidden="true" class="emoji">{lang.flag}</span>
+                </button>
+              {/each}
+            </div>
           </div>
 
           <!-- Initial State -->
@@ -378,22 +384,22 @@
               <div class="flex flex-col justify-center">
                 <h2 class="text-2xl font-light text-base-content mb-3">{device.name}</h2>
                 <div class="space-y-1.5 text-sm text-base-content/70">
-                  <div class="flex justify-between border-b border-neutral-100 pb-1.5">
+                  <div class="flex justify-between border-b border-base-300 pb-1.5">
                     <span class="text-base-content/60">VID</span>
                     <span class="font-mono">0x{device.vid}</span>
                   </div>
-                  <div class="flex justify-between border-b border-neutral-100 pb-1.5">
+                  <div class="flex justify-between border-b border-base-300 pb-1.5">
                     <span class="text-base-content/60">PID</span>
                     <span class="font-mono">0x{device.pid}</span>
                   </div>
                   {#if device.manufacturer}
-                    <div class="flex justify-between border-b border-neutral-100 pb-1.5">
+                    <div class="flex justify-between border-b border-base-300 pb-1.5">
                       <span class="text-base-content/60">{t.Manufacturer}</span>
                       <span>{device.manufacturer}</span>
                     </div>
                   {/if}
                   {#if device.product}
-                    <div class="flex justify-between border-b border-neutral-100 pb-1.5">
+                    <div class="flex justify-between border-b border-base-300 pb-1.5">
                       <span class="text-base-content/60">{t.Product}</span>
                       <span>{device.product}</span>
                     </div>
@@ -408,7 +414,7 @@
                   </div>
                   
                   {#if device.isBootloader && selectedFirmware}
-                    <div class="flex justify-between border-t border-neutral-100 pt-1.5 mt-2">
+                    <div class="flex justify-between border-t border-base-300 pt-1.5 mt-2">
                       <span class="text-base-content/60">{t.Firmware}</span>
                       <span class="text-xs text-success font-mono">{selectedKeyboardModel}</span>
                     </div>
@@ -480,7 +486,7 @@
         {#if state === 'error'}
           <!-- Error State -->
           <div class="text-center py-16">
-            <div class="w-20 h-20 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+            <div class="w-20 h-20 mx-auto mb-4 bg-error/10 rounded-full flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -791,7 +797,7 @@
       <div class="grid grid-cols-2 gap-4 mb-6">
         {#each modelCandidates as model, index}
           <button 
-            class="card border-2 transition-all overflow-hidden {selectedModelIndex === index ? 'border-neutral-800 bg-base-200' : 'border-neutral-200 hover:border-neutral-400'}"
+            class="card border-2 transition-all overflow-hidden {selectedModelIndex === index ? 'border-base-content bg-base-200' : 'border-base-300 hover:border-base-content/50'}"
             onclick={() => selectedModelIndex = index}
           >
             <div class="card-body p-0">
