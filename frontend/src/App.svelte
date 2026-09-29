@@ -450,8 +450,8 @@
 
             {#if isLinux && showUdevWarning}
               <div class="alert alert-warning text-left max-w-xl mx-auto mb-4 py-3">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-5 h-5">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77-1.333.192-3 1.732-3z" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
 
                 <div class="flex-1 text-xs">
@@ -538,12 +538,17 @@
 {#if showConfirmModal}
   <div class="modal modal-open">
     <div class="modal-box bg-white max-w-md">
-      <h3 class="font-bold text-xl text-error mb-4">{t.Warning}</h3>
+      <h3 class="font-bold text-xl text-error mb-4 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 fill-current" viewBox="0 0 24 24">
+          <path d="M12 2.5a2 2 0 0 1 1.732 1l9 15.588A2 2 0 0 1 21 22H3a2 2 0 0 1-1.732-2.912l9-15.588A2 2 0 0 1 12 2.5z M11 9v5h2V9h-2zm0 7v2h2v-2h-2z" fill-rule="evenodd" clip-rule="evenodd"/>
+        </svg>
+        {t.Warning}
+      </h3>
       
       <div class="alert alert-error mb-4">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77-1.333.192-3 1.732-3z" />
-        </svg>
+       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+         </svg>
         <div class="text-sm">
           <p class="font-bold">{t.DangerousOperation}</p>
           <p class="text-xs mt-1">{t.FlashingWrongFirmware}</p>
