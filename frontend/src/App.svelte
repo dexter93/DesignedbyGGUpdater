@@ -622,7 +622,6 @@
             bind:value={confirmationText}
             placeholder={selectedKeyboardModel}
             class="input input-bordered w-full"
-            disabled={countdown > 0}
           />
         </div>
       {/if}
@@ -630,7 +629,17 @@
       <div class="flex items-center justify-between gap-4">
         <div class="text-sm text-base-content/70 min-w-0">
           {#if countdown > 0}
-            {t.PleaseWaitPrefix} {countdown} {countdown !== 1 ? t.Seconds : t.Second}{t.PleaseWaitSuffix}
+            <span>{t.PleaseWaitPrefix}</span>
+            <span class="countdown font-mono text-base-content">
+              <span
+                style="--value:{countdown}; --digits:2;"
+                aria-live="polite"
+                aria-label={countdown}
+              >
+                {countdown}
+              </span>
+            </span>
+            <span>{countdown !== 1 ? t.Seconds : t.Second}{t.PleaseWaitSuffix}</span>
           {:else if requiresConfirmation && !confirmationMatch}
             <span class="text-error">{t.TextDoesntMatch}</span>
           {:else}
@@ -644,19 +653,22 @@
           </button>
 
           <button
-            class="btn btn-error gap-2"
+            class="btn btn-error"
             onclick={confirmAndFlash}
             disabled={!canProceed}
           >
             {#if countdown > 0}
-              <div
-                class="radial-progress text-warning"
-                style="--value:{((15 - countdown) / 15 * 100).toFixed(0)}; --size:1.75rem; --thickness: 2px;"
-              >
-                {countdown}
-              </div>
+              <span class="countdown font-mono text-lg">
+                <span
+                  style="--value:{countdown}; --digits:2;"
+                  aria-live="polite"
+                  aria-label={countdown}
+                >
+                  {countdown}
+                </span>
+              </span>
             {:else}
-            {t.FlashNow}
+              {t.FlashNow}
             {/if}
           </button>
         </div>
