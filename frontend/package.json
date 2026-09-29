@@ -8,16 +8,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sableclient/twemoji-font": "^1.0.4",
-    "daisyui": "^4.7.2"
+    "@sableclient/twemoji-font": "^1.0.4"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^3.0.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tailwindcss/vite": "^4.3.3",
     "@tsconfig/svelte": "^5.0.2",
     "autoprefixer": "^10.4.17",
+    "daisyui": "^5.7.46",
     "postcss": "^8.4.35",
-    "svelte": "^4.2.9",
-    "tailwindcss": "^3.4.1",
-    "vite": "^5.0.12"
+    "svelte": "^5.57.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.1"
   }
 }
