@@ -81,6 +81,7 @@
   let canFlash = $derived(
     state === 'ready' &&
     device &&
+    device.canFlash !== false &&
     !showUdevWarning &&
     (device.isBootloader ? selectedFirmware : device.firmwarePath)
   )
