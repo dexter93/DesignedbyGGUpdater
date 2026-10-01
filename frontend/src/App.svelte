@@ -50,6 +50,8 @@
   let iconTapTimer = $state(null)
   let logsCopied = $state(false)
   let copyFeedbackTimer = $state(null)
+  let notification = $state('')
+  let notificationTimer = $state(null)
 
   function handleIconTap() {
     iconTapCount++
@@ -143,7 +145,7 @@
         copyFeedbackTimer = null
       }, 1000)
     } catch (err) {
-      console.error('Failed to copy logs:', err)
+      handleAppError(err)
     }
   }
   function getErrorCode(err) {
@@ -156,13 +158,22 @@
     return match?.[1] || 'UNKNOWN'
   }
 
-  function handleAppError(err, { showUdevHint = false } = {}) {
+  function notifyError(message) {
+    notification = message
+    clearTimeout(notificationTimer)
+    notificationTimer = setTimeout(() => {
+      notification = ''
+      notificationTimer = null
+    }, 3000)
+  }
+
+  function handleAppError(err) {
     const code = getErrorCode(err)
 
     console.error('Operation failed:', err)
 
     showUdevWarning =
-      code === 'USB_PERMISSION' && showUdevHint
+      code === 'USB_PERMISSION' && isLinux
 
     switch (code) {
       case 'NO_DEVICE':
@@ -185,6 +196,7 @@
         errorMsg = t.UnexpectedError
         break
     }
+    notifyError(errorMsg)
   }
 
   async function detectDevice() {
@@ -222,7 +234,7 @@
 
     } catch (err) {
       state = 'error'
-      handleAppError(err, { showUdevHint: isLinux })
+      handleAppError(err)
     }
   }
 
@@ -281,7 +293,7 @@
         keyboardImage = ''
       }
     } catch (err) {
-      console.error('Failed to select firmware:', err)
+      handleAppError(err)
     }
   }
 
@@ -339,7 +351,7 @@
       state = 'success'
     } catch (err) {
       state = 'error'
-      handleAppError(err, { showUdevHint: isLinux })
+      handleAppError(err)
     }
   }
 
@@ -625,6 +637,17 @@
 
       </div>
     </div>
+
+    {#if notification}
+      <div class="toast toast-top toast-center z-[100]" role="alert" aria-live="assertive">
+        <div class="alert alert-error shadow-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{notification}</span>
+        </div>
+      </div>
+    {/if}
 
     <!-- Footer -->
     <div class="text-center mt-3 text-xs text-base-content/50 pb-4">
