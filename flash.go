@@ -175,6 +175,16 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 	}
 	defer a.endFlash()
 
+	resolvedDevice, err := resolveConnectedDevice(device)
+	if err != nil {
+		var appErr *appError
+		if errors.As(err, &appErr) {
+			return nil, appErr
+		}
+		return nil, newAppError(errCodeNoDevice, err)
+	}
+	device = resolvedDevice
+
 	a.emitLog("info", "═══════════════════════════════════════")
 	a.emitLog("info", "STARTING FLASH OPERATION")
 	a.emitLog("info", "═══════════════════════════════════════")
