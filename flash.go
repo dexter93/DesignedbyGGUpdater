@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -251,16 +252,24 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 	go func() { scanResults <- scanOutput(stderr, handleOutput) }()
 
 	a.emitLog("info", "Waiting for flash process to complete...")
+	var scanErrs [2]error
+	for i := range scanErrs {
+		scanErrs[i] = <-scanResults
+		if scanErrs[i] != nil {
+			// A scanner that stops draining a pipe can deadlock the child process.
+			// Cancel it before waiting for the remaining stream or process exit.
+			cancel()
+		}
+	}
+
 	waitErr := cmd.Wait()
-	stdoutErr := <-scanResults
-	stderrErr := <-scanResults
 
 	if ctx.Err() == context.DeadlineExceeded {
 		a.emitLog("error", "✗ FLASH TIMED OUT")
 		return nil, newAppError(errCodeTimeout, fmt.Errorf("flash operation exceeded %s", flashOperationTimeout))
 	}
 
-	if outputErr := errors.Join(stdoutErr, stderrErr); outputErr != nil {
+	if outputErr := errors.Join(scanErrs[0], scanErrs[1]); outputErr != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to read sonixflasher output: %v", outputErr))
 		return nil, newAppError(errCodeFlash, outputErr)
 	}
