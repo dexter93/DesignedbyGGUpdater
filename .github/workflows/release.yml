@@ -26,7 +26,7 @@ jobs:
             os: windows-latest
             platform: windows/amd64
             build_flags: ""
-            artifact_name: DesignedbyGGUpdater-windows-amd64.exe
+            artifact_name: DesignedbyGGUpdater-windows-amd64
 
         #  - name: macOS (Apple Silicon)
         #    os: macos-latest
