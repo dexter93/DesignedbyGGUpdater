@@ -232,7 +232,7 @@ func (a *App) DetectDevice() (*Device, error) {
 					if firmwareExists {
 						a.emitLog("success", fmt.Sprintf("  ✓ Embedded firmware: %s", matchedDevice.FirmwarePath))
 					} else {
-						a.emitLog("warn", fmt.Sprintf("  ✗ Firmware not available"))
+						a.emitLog("warn", "  ✗ Firmware not available")
 					}
 					a.emitLog("warn", "  Note: Requires --reboot to enter bootloader mode")
 				}
@@ -350,9 +350,7 @@ func (a *App) GetAvailableKeyboards() []AppModeDevice {
 	var keyboards []AppModeDevice
 
 	for _, devices := range knownAppModePIDs {
-		for _, device := range devices {
-			keyboards = append(keyboards, device)
-		}
+		keyboards = append(keyboards, devices...)
 	}
 
 	return keyboards
