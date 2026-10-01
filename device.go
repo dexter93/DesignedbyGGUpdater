@@ -334,7 +334,7 @@ func (a *App) GetKeyboardImage(device *Device) string {
 	}
 
 	// Map model name to image path
-	imagePath := fmt.Sprintf("images/%s.jpg", modelName)
+	imagePath := fmt.Sprintf("images/%s.png", modelName)
 
 	data, err := binaries.ReadFile(imagePath)
 	if err != nil {
