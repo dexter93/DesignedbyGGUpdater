@@ -195,7 +195,11 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 	if err != nil {
 		return nil, newAppError(errCodeFlash, fmt.Errorf("create temporary directory: %w", err))
 	}
-	defer os.RemoveAll(jobDir)
+	defer func() {
+		if err := os.RemoveAll(jobDir); err != nil {
+			a.emitLog("warn", fmt.Sprintf("Failed to remove temporary files: %v", err))
+		}
+	}()
 
 	firmwarePath, err := a.resolveFirmware(jobDir, device, customFirmwarePath)
 	if err != nil {
