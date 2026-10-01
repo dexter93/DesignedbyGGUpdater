@@ -12,21 +12,41 @@ func validateDevice(device *Device) error {
 	if device == nil {
 		return fmt.Errorf("device is required")
 	}
+	if strings.TrimSpace(device.Path) == "" {
+		return fmt.Errorf("device path is required")
+	}
 
 	return validateVIDPID(device.VID, device.PID)
 }
 
 func validateVIDPID(vid, pid string) error {
-	for label, value := range map[string]string{"VID": vid, "PID": pid} {
-		if len(value) != 4 {
-			return fmt.Errorf("%s must be a four-character hexadecimal value", label)
-		}
-		if _, err := strconv.ParseUint(value, 16, 16); err != nil {
-			return fmt.Errorf("invalid %s %q: %w", label, value, err)
-		}
+	_, _, err := parseVIDPID(vid, pid)
+	return err
+}
+
+func parseVIDPID(vid, pid string) (uint16, uint16, error) {
+	values := []struct {
+		label string
+		value string
+	}{
+		{label: "VID", value: vid},
+		{label: "PID", value: pid},
 	}
 
-	return nil
+	parsed := make([]uint16, len(values))
+	for i, item := range values {
+		if len(item.value) != 4 {
+			return 0, 0, fmt.Errorf("%s must be a four-character hexadecimal value", item.label)
+		}
+
+		value, err := strconv.ParseUint(item.value, 16, 16)
+		if err != nil {
+			return 0, 0, fmt.Errorf("invalid %s %q: %w", item.label, item.value, err)
+		}
+		parsed[i] = uint16(value)
+	}
+
+	return parsed[0], parsed[1], nil
 }
 
 func validateCustomFirmware(path string) error {
