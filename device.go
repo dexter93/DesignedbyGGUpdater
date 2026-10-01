@@ -23,6 +23,8 @@ type Device struct {
 	IsBootloader bool   `json:"isBootloader"`
 	FirmwarePath string `json:"firmwarePath"`
 	Candidates   string `json:"candidates,omitempty"`
+	CanFlash     bool   `json:"canFlash"`
+	WarningCode  string `json:"warningCode,omitempty"`
 }
 
 type AppModeDevice struct {
@@ -92,7 +94,34 @@ var knownAppModePIDs = map[uint16][]AppModeDevice{
 	},
 }
 
+func (a *App) applyUdevAccessStatus(device *Device, vid uint16, pid uint16) {
+	if a == nil || device == nil || runtime.GOOS != "linux" {
+		return
+	}
+
+	status, err := checkUdevAccess(vid, pid)
+	if err != nil {
+		a.emitLog("warn", fmt.Sprintf("Unable to verify USB access: %v", err))
+		return
+	}
+	if !status.Found {
+		a.emitLog("warn", "Device disappeared while verifying USB access")
+		return
+	}
+	if status.CanOpen {
+		return
+	}
+
+	device.CanFlash = false
+	device.WarningCode = errCodeUSBPermission
+	a.emitLog("warn", "  ⚠ Udev rules missing for this device")
+}
+
 func (a *App) DetectDevice() (*Device, error) {
+	if err := a.requireHID(); err != nil {
+		return nil, err
+	}
+
 	a.emitLog("info", "═══════════════════════════════════════")
 	a.emitLog("info", "Starting USB HID device scan...")
 	a.emitLog("info", "═══════════════════════════════════════")
@@ -102,6 +131,10 @@ func (a *App) DetectDevice() (*Device, error) {
 	deviceCount := 0
 
 	err := hid.Enumerate(0, 0, func(info *hid.DeviceInfo) error {
+		if info == nil {
+			return fmt.Errorf("HID enumeration returned an empty device record")
+		}
+
 		deviceCount++
 
 		deviceKey := fmt.Sprintf("%04x:%04x:%s", info.VendorID, info.ProductID, info.SerialNbr)
@@ -125,17 +158,13 @@ func (a *App) DetectDevice() (*Device, error) {
 					Path:         info.Path,
 					IsBootloader: true,
 					FirmwarePath: "",
+					CanFlash:     true,
 				}
+				a.applyUdevAccessStatus(device, info.VendorID, info.ProductID)
 				detectedDevices = append(detectedDevices, device)
 
 				a.emitLog("success", fmt.Sprintf("✓ Found in BOOTLOADER mode: %s", chipName))
 				a.emitLog("info", fmt.Sprintf("  VID: 0x%s | PID: 0x%s", device.VID, device.PID))
-
-				if runtime.GOOS == "linux" {
-					if !a.CheckUdevRules(info.VendorID, info.ProductID) {
-						a.emitLog("warn", "  ⚠ Udev rules missing for this device")
-					}
-				}
 			}
 		}
 
@@ -156,7 +185,10 @@ func (a *App) DetectDevice() (*Device, error) {
 					if len(matchedDevices) > 1 {
 						// Multiple devices with same bcdDevice - needs disambiguation
 						matchedDevice = &matchedDevices[0]
-						candidatesData, _ := json.Marshal(matchedDevices)
+						candidatesData, err := json.Marshal(matchedDevices)
+						if err != nil {
+							return fmt.Errorf("encode model candidates: %w", err)
+						}
 						candidatesJSON = string(candidatesData)
 					} else {
 						matchedDevice = &matchedDevices[0]
@@ -183,7 +215,9 @@ func (a *App) DetectDevice() (*Device, error) {
 						IsBootloader: false,
 						FirmwarePath: matchedDevice.FirmwarePath,
 						Candidates:   candidatesJSON,
+						CanFlash:     true,
 					}
+					a.applyUdevAccessStatus(device, info.VendorID, info.ProductID)
 					detectedDevices = append(detectedDevices, device)
 
 					if len(matchedDevices) > 1 {
@@ -201,12 +235,6 @@ func (a *App) DetectDevice() (*Device, error) {
 						a.emitLog("warn", fmt.Sprintf("  ✗ Firmware not available"))
 					}
 					a.emitLog("warn", "  Note: Requires --reboot to enter bootloader mode")
-
-					if runtime.GOOS == "linux" {
-						if !a.CheckUdevRules(info.VendorID, info.ProductID) {
-							a.emitLog("warn", "  ⚠ Udev rules missing for this device")
-						}
-					}
 				}
 			}
 		}
