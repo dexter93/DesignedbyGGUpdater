@@ -56,7 +56,9 @@ func classifyHIDError(err error) string {
 	message := strings.ToLower(err.Error())
 
 	if strings.Contains(message, "permission denied") ||
-		strings.Contains(message, "access denied") {
+		strings.Contains(message, "access denied") ||
+		strings.Contains(message, "access is denied") ||
+		strings.Contains(message, "libusb_error_access") {
 		return errCodeUSBPermission
 	}
 

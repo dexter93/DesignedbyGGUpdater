@@ -87,8 +87,10 @@ type Translation struct {
 	FlashError            string
 	UnexpectedError       string
 	USBPermissionError    string
-	InstallUdevRules      string
-	UdevRulesRequired     string
+	InvalidInputError     string
+	BusyError             string
+	TimeoutError          string
+	UnavailableError      string
 	NoDeviceDetected      string
 	FlashOperationFailed  string
 	CheckLogsForDetails   string
@@ -98,7 +100,7 @@ type Translation struct {
 
 var translations = map[string]Translation{
 	"en": {
-		AppTitle:                "DesignedbyGG Updater",
+		AppTitle:                appName,
 		AppDescription:          "A modern GUI wrapper for SonixFlasher, designed to simplify firmware updates for DesignedbyGG keyboards.",
 		DetectDevice:            "Detect Device",
 		ConnectAndDetect:        "Connect your keyboard and click detect",
@@ -167,8 +169,10 @@ var translations = map[string]Translation{
 		FlashError:              "The firmware could not be flashed",
 		UnexpectedError:         "An unexpected error occurred",
 		USBPermissionError:      "USB Permission Error: Please install udev rules",
-		InstallUdevRules:        "USB Permission Error - Udev rules required",
-		UdevRulesRequired:       "USB Permission Error - Udev rules required",
+		InvalidInputError:       "Some input is invalid. Check the selected device and firmware.",
+		BusyError:               "A flash operation is already in progress.",
+		TimeoutError:            "The flash operation timed out. Check the device and try again.",
+		UnavailableError:        "The application is unavailable. Restart it and try again.",
 		NoDeviceDetected:        "No device detected",
 		FlashOperationFailed:    "Flash operation failed",
 		CheckLogsForDetails:     "Flash failed - check logs for details",
@@ -176,7 +180,7 @@ var translations = map[string]Translation{
 		NotCurrentlySupported:   "This keyboard model is currently not supported!",
 	},
 	"fr": {
-		AppTitle:                "DesignedbyGG Updater",
+		AppTitle:                appName,
 		AppDescription:          "Une interface graphique moderne pour SonixFlasher, conçue pour simplifier les mises à jour de firmware pour les claviers DesignedbyGG.",
 		DetectDevice:            "Détecter l'appareil",
 		ConnectAndDetect:        "Connectez votre clavier et cliquez sur détecter",
@@ -245,8 +249,10 @@ var translations = map[string]Translation{
 		FlashError:              "Le firmware n'a pas pu être installé",
 		UnexpectedError:         "Une erreur inattendue s'est produite",
 		USBPermissionError:      "Erreur de permission USB: Veuillez installer les règles udev",
-		InstallUdevRules:        "Erreur de permission USB - Règles udev requises",
-		UdevRulesRequired:       "Erreur de permission USB - Règles udev requises",
+		InvalidInputError:       "Une entrée est invalide. Vérifiez l'appareil et le firmware sélectionnés.",
+		BusyError:               "Une opération de flashage est déjà en cours.",
+		TimeoutError:            "L'opération de flashage a expiré. Vérifiez l'appareil et réessayez.",
+		UnavailableError:        "L'application est indisponible. Redémarrez-la et réessayez.",
 		NoDeviceDetected:        "Aucun appareil détecté",
 		FlashOperationFailed:    "Échec de l'opération de flashage",
 		CheckLogsForDetails:     "Échec du flashage - vérifiez les logs pour plus de détails",

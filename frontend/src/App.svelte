@@ -152,7 +152,7 @@
     const message = err?.message || ''
 
     const match = message.match(
-      /^(NO_DEVICE|USB_PERMISSION|HID_ENUMERATION|FLASH)(?::|$)/
+      /^(NO_DEVICE|USB_PERMISSION|HID_ENUMERATION|HID_INIT|FLASH|INVALID_INPUT|BUSY|TIMEOUT|UNAVAILABLE)(?::|$)/
     )
 
     return match?.[1] || 'UNKNOWN'
@@ -185,11 +185,28 @@
         break
 
       case 'HID_ENUMERATION':
+      case 'HID_INIT':
         errorMsg = t.HIDEnumerationError
         break
 
       case 'FLASH':
         errorMsg = t.FlashError
+        break
+
+      case 'INVALID_INPUT':
+        errorMsg = t.InvalidInputError
+        break
+
+      case 'BUSY':
+        errorMsg = t.BusyError
+        break
+
+      case 'TIMEOUT':
+        errorMsg = t.TimeoutError
+        break
+
+      case 'UNAVAILABLE':
+        errorMsg = t.UnavailableError
         break
 
       default:

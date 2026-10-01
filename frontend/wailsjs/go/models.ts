@@ -140,8 +140,10 @@ export namespace main {
 	    FlashError: string;
 	    UnexpectedError: string;
 	    USBPermissionError: string;
-	    InstallUdevRules: string;
-	    UdevRulesRequired: string;
+	    InvalidInputError: string;
+	    BusyError: string;
+	    TimeoutError: string;
+	    UnavailableError: string;
 	    NoDeviceDetected: string;
 	    FlashOperationFailed: string;
 	    CheckLogsForDetails: string;
@@ -223,8 +225,10 @@ export namespace main {
 	        this.FlashError = source["FlashError"];
 	        this.UnexpectedError = source["UnexpectedError"];
 	        this.USBPermissionError = source["USBPermissionError"];
-	        this.InstallUdevRules = source["InstallUdevRules"];
-	        this.UdevRulesRequired = source["UdevRulesRequired"];
+	        this.InvalidInputError = source["InvalidInputError"];
+	        this.BusyError = source["BusyError"];
+	        this.TimeoutError = source["TimeoutError"];
+	        this.UnavailableError = source["UnavailableError"];
 	        this.NoDeviceDetected = source["NoDeviceDetected"];
 	        this.FlashOperationFailed = source["FlashOperationFailed"];
 	        this.CheckLogsForDetails = source["CheckLogsForDetails"];
