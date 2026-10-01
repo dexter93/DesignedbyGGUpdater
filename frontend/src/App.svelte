@@ -542,6 +542,11 @@
               <button class="btn btn-outline btn-wide" onclick={reset}>
                 {t.FlashAnother}
               </button>
+              {#if logs.length > 0}
+                <button class="btn btn-ghost btn-wide" onclick={() => showLogsModal = true}>
+                  {t.ViewProgress}
+                </button>
+              {/if}
             </div>
           </div>
         {/if}
