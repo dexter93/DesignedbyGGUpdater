@@ -483,7 +483,7 @@
               </button>
             {:else}
               <!-- Application Mode: Direct Flash -->
-              <button class="btn btn-neutral btn-lg w-full mb-2" onclick={openConfirmModal}>
+              <button class="btn btn-neutral btn-lg w-full mb-2" onclick={openConfirmModal} disabled={!canFlash}>
                 {t.FlashFirmware}
               </button>
             {/if}
