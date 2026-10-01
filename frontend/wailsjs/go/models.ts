@@ -33,6 +33,8 @@ export namespace main {
 	    isBootloader: boolean;
 	    firmwarePath: string;
 	    candidates?: string;
+	    canFlash: boolean;
+	    warningCode?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Device(source);
@@ -50,6 +52,8 @@ export namespace main {
 	        this.isBootloader = source["isBootloader"];
 	        this.firmwarePath = source["firmwarePath"];
 	        this.candidates = source["candidates"];
+	        this.canFlash = source["canFlash"];
+	        this.warningCode = source["warningCode"];
 	    }
 	}
 	export class FlashResult {
