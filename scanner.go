@@ -2,12 +2,21 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strings"
 )
 
 func scanOutput(r io.Reader, fn func(string)) error {
+	if r == nil {
+		return fmt.Errorf("output reader is nil")
+	}
+	if fn == nil {
+		return fmt.Errorf("output handler is nil")
+	}
+
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, outputScannerInitialBuffer), outputScannerMaxBuffer)
 	scanner.Split(splitOutput)
 
 	for scanner.Scan() {
