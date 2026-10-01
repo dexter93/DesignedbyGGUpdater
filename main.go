@@ -20,12 +20,10 @@ var icon []byte
 var Version = "dev"
 
 func main() {
-	// Create an instance of the app structure
 	app := NewApp()
 
-	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "DesignedbyGG Updater",
+		Title:  appName,
 		Width:  1024,
 		Height: 768,
 		AssetServer: &assetserver.Options{
@@ -33,6 +31,7 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 250, G: 250, B: 250, A: 1},
 		OnStartup:        app.startup,
+		OnShutdown:       app.shutdown,
 		Bind: []interface{}{
 			app,
 		},
@@ -43,8 +42,8 @@ func main() {
 			IsZoomControlEnabled: true,
 			WebviewUserDataPath:  "",
 			ZoomFactor:           1.0,
-			WebviewGpuIsDisabled: false, // Enable GPU
-			WebviewBrowserPath:   "",    // Use system WebView2
+			WebviewGpuIsDisabled: false,
+			WebviewBrowserPath:   "",
 			Theme:                windows.SystemDefault,
 		},
 		Mac: &mac.Options{

@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type FlashResult struct {
@@ -16,99 +19,119 @@ type FlashResult struct {
 	Message string `json:"message"`
 }
 
-func (a *App) GetSonixFlasherPath() (string, error) {
-	a.emitLog("info", fmt.Sprintf("Detecting platform: %s/%s", runtime.GOOS, runtime.GOARCH))
+type outputStatus struct {
+	successDetected bool
+	permissionError bool
+	deviceOpenError bool
+}
 
-	var binaryPath string
+func sonixFlasherEmbeddedPath() (string, error) {
 	switch runtime.GOOS {
 	case "darwin":
-		binaryPath = "binaries/darwin/sonixflasher"
-		a.emitLog("info", "Using macOS binary")
+		return "binaries/darwin/sonixflasher", nil
 	case "linux":
-		binaryPath = "binaries/linux/sonixflasher"
-		a.emitLog("info", "Using Linux binary")
+		return "binaries/linux/sonixflasher", nil
 	case "windows":
-		binaryPath = "binaries/windows/sonixflasher.exe"
-		a.emitLog("info", "Using Windows binary")
+		return "binaries/windows/sonixflasher.exe", nil
 	default:
-		err := fmt.Errorf("unsupported platform: %s", runtime.GOOS)
-		a.emitLog("error", err.Error())
-		return "", err
+		return "", fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
+}
 
-	tmpDir := os.TempDir()
-
-	execName := "sonixflasher"
+func sonixFlasherFileName() string {
 	if runtime.GOOS == "windows" {
-		execName = "sonixflasher.exe"
+		return "sonixflasher.exe"
 	}
-	tmpPath, err := a.extractEmbeddedFile(binaryPath, tmpDir, execName, 0755)
+
+	return "sonixflasher"
+}
+
+func writeEmbeddedFile(srcPath, dstPath string, perm os.FileMode) error {
+	data, err := binaries.ReadFile(srcPath)
+	if err != nil {
+		return fmt.Errorf("read embedded file %q: %w", srcPath, err)
+	}
+
+	if err := os.WriteFile(dstPath, data, perm); err != nil {
+		return fmt.Errorf("write embedded file %q: %w", dstPath, err)
+	}
+
+	return nil
+}
+
+func extractSonixFlasher(dstDir string) (string, error) {
+	if strings.TrimSpace(dstDir) == "" {
+		return "", fmt.Errorf("temporary directory is required")
+	}
+
+	srcPath, err := sonixFlasherEmbeddedPath()
 	if err != nil {
 		return "", err
 	}
 
+	binaryPath := filepath.Join(dstDir, sonixFlasherFileName())
+	if err := writeEmbeddedFile(srcPath, binaryPath, 0o755); err != nil {
+		return "", err
+	}
+
 	if runtime.GOOS == "windows" {
-		if _, err := a.extractEmbeddedFile("binaries/windows/libusb-1.0.dll", tmpDir, "libusb-1.0.dll", 0755); err != nil {
+		dllPath := filepath.Join(dstDir, "libusb-1.0.dll")
+		if err := writeEmbeddedFile("binaries/windows/libusb-1.0.dll", dllPath, 0o644); err != nil {
 			return "", err
 		}
 	}
 
-	a.emitLog("success", "Binary extracted successfully")
-	return tmpPath, nil
+	return binaryPath, nil
 }
 
-func (a *App) extractEmbeddedFile(srcPath, dstDir, dstName string, perm os.FileMode) (string, error) {
-	a.emitLog("info", fmt.Sprintf("Extracting embedded binary: %s", srcPath))
-	data, err := binaries.ReadFile(srcPath)
-	if err != nil {
-		a.emitLog("error", fmt.Sprintf("Failed to read embedded binary: %v", err))
-		return "", fmt.Errorf("failed to read embedded binary: %v", err)
+func knownEmbeddedFirmware(path string) bool {
+	if strings.TrimSpace(path) == "" {
+		return false
 	}
 
-	dstPath := filepath.Join(dstDir, dstName)
-	a.emitLog("info", fmt.Sprintf("Writing binary to: %s", dstPath))
-	if err := os.WriteFile(dstPath, data, perm); err != nil {
-		a.emitLog("error", fmt.Sprintf("Failed to write binary: %v", err))
-		return "", fmt.Errorf("failed to write binary: %v", err)
+	for _, devices := range knownAppModePIDs {
+		for _, device := range devices {
+			if device.FirmwarePath == path {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func extractEmbeddedFirmware(dstDir, firmwarePath string) (string, error) {
+	if strings.TrimSpace(dstDir) == "" {
+		return "", fmt.Errorf("temporary directory is required")
+	}
+	if !knownEmbeddedFirmware(firmwarePath) {
+		return "", fmt.Errorf("unknown embedded firmware %q", firmwarePath)
+	}
+
+	dstPath := filepath.Join(dstDir, filepath.Base(firmwarePath))
+	if err := writeEmbeddedFile(firmwarePath, dstPath, 0o644); err != nil {
+		return "", err
 	}
 
 	return dstPath, nil
 }
 
-func (a *App) GetEmbeddedFirmware(firmwarePath string) (string, error) {
-	a.emitLog("info", fmt.Sprintf("Loading embedded firmware: %s", firmwarePath))
-
-	data, err := binaries.ReadFile(firmwarePath)
-	if err != nil {
-		a.emitLog("error", fmt.Sprintf("Firmware not found: %v", err))
-		return "", fmt.Errorf("firmware not found: %v", err)
-	}
-
-	tmpDir := os.TempDir()
-	tmpPath := filepath.Join(tmpDir, filepath.Base(firmwarePath))
-
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
-		a.emitLog("error", fmt.Sprintf("Failed to write firmware: %v", err))
-		return "", fmt.Errorf("failed to write firmware: %v", err)
-	}
-
-	a.emitLog("success", fmt.Sprintf("Firmware extracted: %.2f KB", float64(len(data))/1024))
-	return tmpPath, nil
-}
-
 func (a *App) SelectFirmware() (string, error) {
+	if a == nil {
+		return "", newAppError(errCodeUnavailable, fmt.Errorf("application is unavailable"))
+	}
+
 	a.emitLog("info", "Opening firmware file picker...")
 
-	file, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+	file, err := wailsruntime.OpenFileDialog(a.applicationContext(), wailsruntime.OpenDialogOptions{
 		Title: "Select Firmware",
 		Filters: []wailsruntime.FileFilter{
 			{DisplayName: "Binary Files (*.bin)", Pattern: "*.bin"},
 		},
 	})
-
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("File picker error: %v", err))
-		return "", err
+		return "", newAppError(errCodeFlash, err)
 	}
 
 	if file == "" {
@@ -116,10 +139,15 @@ func (a *App) SelectFirmware() (string, error) {
 		return "", nil
 	}
 
+	if err := validateCustomFirmware(file); err != nil {
+		a.emitLog("error", fmt.Sprintf("Cannot use selected firmware: %v", err))
+		return "", newAppError(errCodeInvalidInput, err)
+	}
+
 	info, err := os.Stat(file)
 	if err != nil {
-		a.emitLog("error", fmt.Sprintf("Cannot access file: %v", err))
-		return "", err
+		a.emitLog("error", fmt.Sprintf("Cannot access selected firmware: %v", err))
+		return "", newAppError(errCodeFlash, err)
 	}
 
 	a.emitLog("success", "═══════════════════════════════════════")
@@ -133,55 +161,56 @@ func (a *App) SelectFirmware() (string, error) {
 }
 
 func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset int64) (*FlashResult, error) {
+	if err := a.requireHID(); err != nil {
+		return nil, err
+	}
+	if err := validateDevice(device); err != nil {
+		return nil, newAppError(errCodeInvalidInput, err)
+	}
+	if offset < 0 {
+		return nil, newAppError(errCodeInvalidInput, fmt.Errorf("offset cannot be negative"))
+	}
+	if err := a.beginFlash(); err != nil {
+		return nil, err
+	}
+	defer a.endFlash()
+
+	resolvedDevice, err := resolveConnectedDevice(device)
+	if err != nil {
+		var appErr *appError
+		if errors.As(err, &appErr) {
+			return nil, appErr
+		}
+		return nil, newAppError(errCodeNoDevice, err)
+	}
+	device = resolvedDevice
+
 	a.emitLog("info", "═══════════════════════════════════════")
 	a.emitLog("info", "STARTING FLASH OPERATION")
 	a.emitLog("info", "═══════════════════════════════════════")
 	a.emitLog("info", fmt.Sprintf("Device: %s", device.Name))
 	a.emitLog("info", fmt.Sprintf("VID:PID: %s/%s", device.VID, device.PID))
 
-	var firmwarePath string
-	var cleanupFirmware bool
-
-	if customFirmwarePath != "" {
-		if strings.HasPrefix(customFirmwarePath, "firmware/") {
-			tmpPath, err := a.GetEmbeddedFirmware(customFirmwarePath)
-			if err != nil {
-				return nil, newAppError(errCodeFlash, err)
-			}
-			firmwarePath = tmpPath
-			cleanupFirmware = true
-			a.emitLog("info", fmt.Sprintf("Using embedded firmware: %s", filepath.Base(customFirmwarePath)))
-		} else {
-			firmwarePath = customFirmwarePath
-			cleanupFirmware = false
-			a.emitLog("info", fmt.Sprintf("Using custom firmware: %s", filepath.Base(firmwarePath)))
-		}
-	} else if device.FirmwarePath != "" {
-		tmpPath, err := a.GetEmbeddedFirmware(device.FirmwarePath)
-		if err != nil {
-			return nil, newAppError(errCodeFlash, err)
-		}
-		firmwarePath = tmpPath
-		cleanupFirmware = true
-		a.emitLog("info", fmt.Sprintf("Using embedded firmware: %s", device.FirmwarePath))
-	} else {
-		err := fmt.Errorf("no firmware specified")
-		a.emitLog("error", err.Error())
-		return nil, newAppError(errCodeFlash, err)
-	}
-
-	if cleanupFirmware {
-		defer os.Remove(firmwarePath)
-	}
-
-	a.emitLog("info", fmt.Sprintf("Offset: 0x%x (%d bytes)", offset, offset))
-	a.emitLog("info", "═══════════════════════════════════════")
-
-	binPath, err := a.GetSonixFlasherPath()
+	jobDir, err := os.MkdirTemp("", appName)
 	if err != nil {
+		return nil, newAppError(errCodeFlash, fmt.Errorf("create temporary directory: %w", err))
+	}
+	defer func() {
+		if err := os.RemoveAll(jobDir); err != nil {
+			a.emitLog("warn", fmt.Sprintf("Failed to remove temporary files: %v", err))
+		}
+	}()
+
+	firmwarePath, err := a.resolveFirmware(jobDir, device, customFirmwarePath)
+	if err != nil {
+		return nil, err
+	}
+
+	binPath, err := extractSonixFlasher(jobDir)
+	if err != nil {
+		a.emitLog("error", fmt.Sprintf("Failed to prepare sonixflasher: %v", err))
 		return nil, newAppError(errCodeFlash, err)
 	}
-	defer os.Remove(binPath)
 
 	vidpid := fmt.Sprintf("%s/%s", device.VID, device.PID)
 	args := []string{
@@ -198,10 +227,16 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 		args = append(args, "--offset", fmt.Sprintf("0x%x", offset))
 	}
 
+	a.emitLog("info", fmt.Sprintf("Offset: 0x%x (%d bytes)", offset, offset))
+	a.emitLog("info", "═══════════════════════════════════════")
 	a.emitLog("info", fmt.Sprintf("Executing: %s %s", filepath.Base(binPath), strings.Join(args, " ")))
 
-	cmd := exec.Command(binPath, args...)
+	ctx, cancel := context.WithTimeout(a.applicationContext(), flashOperationTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, binPath, args...)
 	hideConsoleWindow(cmd)
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		a.emitLog("error", fmt.Sprintf("Failed to create stdout pipe: %v", err))
@@ -219,84 +254,130 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 		return nil, newAppError(errCodeFlash, err)
 	}
 
-	var outputMu sync.Mutex
-	successDetected := false
-	permissionError := false
-	deviceOpenError := false
-
+	status := &outputStatus{}
+	var statusMu sync.Mutex
 	handleOutput := func(line string) {
-		lower := strings.ToLower(line)
-
-		outputMu.Lock()
-		switch {
-		case line == "=== FLASHING COMPLETED SUCCESSFULLY ===":
-			successDetected = true
-
-		// v3: device was found, but its USB/HID interface could not be opened.
-		// This is the flasher's explicit permissions/access path.
-		case strings.Contains(lower, "device present but failed to open (permissions?)"),
-			strings.Contains(lower, "permission denied"),
-			strings.Contains(lower, "access denied"),
-			strings.Contains(lower, "access is denied"),
-			strings.Contains(lower, "libusb_error_access"):
-			permissionError = true
-
-		// v3: device was not found, or all attempts to open it failed without
-		// identifying the permissions/access path above.
-		case strings.Contains(lower, "device not found"),
-			strings.Contains(lower, "failed to open device after"):
-			deviceOpenError = true
-		}
-		outputMu.Unlock()
-
-		level := "info"
-		switch {
-		case strings.Contains(lower, "failed") ||
-			strings.Contains(lower, "error") ||
-			strings.Contains(lower, "invalid") ||
-			strings.Contains(lower, "mismatch") ||
-			strings.Contains(lower, "cannot open") ||
-			strings.Contains(lower, "unsupported"):
-			level = "error"
-		case strings.Contains(lower, "warning") ||
-			strings.Contains(lower, "potentially dangerous") ||
-			strings.Contains(lower, "skipped"):
-			level = "warn"
-		case strings.Contains(lower, "successfully") ||
-			strings.Contains(lower, "verified"):
-			level = "success"
-		}
-
-		a.emitLog(level, line)
+		updateOutputStatus(status, &statusMu, line)
+		a.emitLog(outputLogLevel(line), line)
 	}
 
-	outputDone := make(chan bool, 2)
-
-	go func() {
-		defer func() { outputDone <- true }()
-		_ = scanOutput(stdout, handleOutput)
-	}()
-
-	go func() {
-		defer func() { outputDone <- true }()
-		_ = scanOutput(stderr, handleOutput)
-	}()
-
-	<-outputDone
-	<-outputDone
+	scanResults := make(chan error, 2)
+	go func() { scanResults <- scanOutput(stdout, handleOutput) }()
+	go func() { scanResults <- scanOutput(stderr, handleOutput) }()
 
 	a.emitLog("info", "Waiting for flash process to complete...")
-	err = cmd.Wait()
+	var scanErrs [2]error
+	for i := range scanErrs {
+		scanErrs[i] = <-scanResults
+		if scanErrs[i] != nil {
+			// A scanner that stops draining a pipe can deadlock the child process.
+			// Cancel it before waiting for the remaining stream or process exit.
+			cancel()
+		}
+	}
 
-	outputMu.Lock()
-	completedSuccessfully := successDetected
-	hasPermissionError := permissionError
-	hasDeviceOpenError := deviceOpenError
-	outputMu.Unlock()
+	waitErr := cmd.Wait()
 
+	if ctx.Err() == context.DeadlineExceeded {
+		a.emitLog("error", "✗ FLASH TIMED OUT")
+		return nil, newAppError(errCodeTimeout, fmt.Errorf("flash operation exceeded %s", flashOperationTimeout))
+	}
+
+	if outputErr := errors.Join(scanErrs[0], scanErrs[1]); outputErr != nil {
+		a.emitLog("error", fmt.Sprintf("Failed to read sonixflasher output: %v", outputErr))
+		return nil, newAppError(errCodeFlash, outputErr)
+	}
+
+	statusMu.Lock()
+	resultStatus := *status
+	statusMu.Unlock()
+
+	return a.flashResult(waitErr, resultStatus)
+}
+
+func (a *App) resolveFirmware(jobDir string, device *Device, customFirmwarePath string) (string, error) {
+	if customFirmwarePath != "" {
+		if knownEmbeddedFirmware(customFirmwarePath) {
+			firmwarePath, err := extractEmbeddedFirmware(jobDir, customFirmwarePath)
+			if err != nil {
+				return "", newAppError(errCodeFlash, err)
+			}
+			a.emitLog("info", fmt.Sprintf("Using embedded firmware: %s", filepath.Base(customFirmwarePath)))
+			return firmwarePath, nil
+		}
+
+		if err := validateCustomFirmware(customFirmwarePath); err != nil {
+			return "", newAppError(errCodeInvalidInput, err)
+		}
+		a.emitLog("info", fmt.Sprintf("Using custom firmware: %s", filepath.Base(customFirmwarePath)))
+		return customFirmwarePath, nil
+	}
+
+	if !knownEmbeddedFirmware(device.FirmwarePath) {
+		return "", newAppError(errCodeInvalidInput, fmt.Errorf("no supported embedded firmware specified"))
+	}
+
+	firmwarePath, err := extractEmbeddedFirmware(jobDir, device.FirmwarePath)
+	if err != nil {
+		return "", newAppError(errCodeFlash, err)
+	}
+
+	a.emitLog("info", fmt.Sprintf("Using embedded firmware: %s", device.FirmwarePath))
+	return firmwarePath, nil
+}
+
+func updateOutputStatus(status *outputStatus, mu *sync.Mutex, line string) {
+	if status == nil || mu == nil {
+		return
+	}
+
+	lower := strings.ToLower(line)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	switch {
+	case line == "=== FLASHING COMPLETED SUCCESSFULLY ===":
+		status.successDetected = true
+	case strings.Contains(lower, "device present but failed to open (permissions?)"),
+		strings.Contains(lower, "permission denied"),
+		strings.Contains(lower, "access denied"),
+		strings.Contains(lower, "access is denied"),
+		strings.Contains(lower, "libusb_error_access"):
+		status.permissionError = true
+	case strings.Contains(lower, "device not found"),
+		strings.Contains(lower, "failed to open device after"):
+		status.deviceOpenError = true
+	}
+}
+
+func outputLogLevel(line string) string {
+	lower := strings.ToLower(line)
+
+	switch {
+	case strings.Contains(lower, "failed"),
+		strings.Contains(lower, "error"),
+		strings.Contains(lower, "invalid"),
+		strings.Contains(lower, "mismatch"),
+		strings.Contains(lower, "cannot open"),
+		strings.Contains(lower, "unsupported"):
+		return "error"
+	case strings.Contains(lower, "warning"),
+		strings.Contains(lower, "potentially dangerous"),
+		strings.Contains(lower, "skipped"):
+		return "warn"
+	case strings.Contains(lower, "successfully"),
+		strings.Contains(lower, "verified"):
+		return "success"
+	default:
+		return "info"
+	}
+}
+
+func (a *App) flashResult(waitErr error, status outputStatus) (*FlashResult, error) {
 	a.emitLog("info", "═══════════════════════════════════════")
 
-	if hasPermissionError {
+	if status.permissionError {
 		a.emitLog("error", "✗ USB PERMISSION ERROR")
 		a.emitLog("error", "═══════════════════════════════════════")
 
@@ -311,16 +392,13 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 		return nil, newAppError(errCodeUSBPermission, nil)
 	}
 
-	if hasDeviceOpenError {
+	if status.deviceOpenError {
 		a.emitLog("error", "✗ DEVICE OPEN FAILED")
 		a.emitLog("error", "═══════════════════════════════════════")
-
-		err := fmt.Errorf("device could not be opened")
-		return nil, newAppError(errCodeFlash, err)
+		return nil, newAppError(errCodeFlash, fmt.Errorf("device could not be opened"))
 	}
 
-	// SonixFlasherC v3 returns 0 after this exact final marker.
-	if err == nil && completedSuccessfully {
+	if waitErr == nil && status.successDetected {
 		a.emitLog("success", "✓ FLASH COMPLETED SUCCESSFULLY")
 		a.emitLog("success", "═══════════════════════════════════════")
 		a.emitLog("info", "Device will reboot automatically")
@@ -332,20 +410,16 @@ func (a *App) FlashFirmware(device *Device, customFirmwarePath string, offset in
 		}, nil
 	}
 
-	if err != nil {
+	if waitErr != nil {
 		a.emitLog("error", "✗ FLASH FAILED")
-		a.emitLog("error", fmt.Sprintf("Exit error: %v", err))
+		a.emitLog("error", fmt.Sprintf("Exit error: %v", waitErr))
 		a.emitLog("error", "═══════════════════════════════════════")
-
-		return nil, newAppError(errCodeFlash, err)
+		return nil, newAppError(errCodeFlash, waitErr)
 	}
 
 	a.emitLog("warn", "⚠ FLASH STATUS UNKNOWN")
 	a.emitLog("warn", "Process completed but success not confirmed")
 	a.emitLog("warn", "═══════════════════════════════════════")
 
-	return nil, newAppError(
-		errCodeFlash,
-		fmt.Errorf("flash status could not be confirmed"),
-	)
+	return nil, newAppError(errCodeFlash, fmt.Errorf("flash status could not be confirmed"))
 }

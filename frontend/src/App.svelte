@@ -81,6 +81,7 @@
   let canFlash = $derived(
     state === 'ready' &&
     device &&
+    device.canFlash !== false &&
     !showUdevWarning &&
     (device.isBootloader ? selectedFirmware : device.firmwarePath)
   )
@@ -482,7 +483,7 @@
               </button>
             {:else}
               <!-- Application Mode: Direct Flash -->
-              <button class="btn btn-neutral btn-lg w-full mb-2" onclick={openConfirmModal}>
+              <button class="btn btn-neutral btn-lg w-full mb-2" onclick={openConfirmModal} disabled={!canFlash}>
                 {t.FlashFirmware}
               </button>
             {/if}
@@ -541,6 +542,11 @@
               <button class="btn btn-outline btn-wide" onclick={reset}>
                 {t.FlashAnother}
               </button>
+              {#if logs.length > 0}
+                <button class="btn btn-ghost btn-wide" onclick={() => showLogsModal = true}>
+                  {t.ViewProgress}
+                </button>
+              {/if}
             </div>
           </div>
         {/if}

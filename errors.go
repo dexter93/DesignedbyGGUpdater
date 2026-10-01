@@ -9,7 +9,12 @@ const (
 	errCodeNoDevice       = "NO_DEVICE"
 	errCodeUSBPermission  = "USB_PERMISSION"
 	errCodeHIDEnumeration = "HID_ENUMERATION"
+	errCodeHIDInit        = "HID_INIT"
 	errCodeFlash          = "FLASH"
+	errCodeInvalidInput   = "INVALID_INPUT"
+	errCodeBusy           = "BUSY"
+	errCodeTimeout        = "TIMEOUT"
+	errCodeUnavailable    = "UNAVAILABLE"
 )
 
 type appError struct {
@@ -18,6 +23,9 @@ type appError struct {
 }
 
 func (e *appError) Error() string {
+	if e == nil {
+		return errCodeUnavailable
+	}
 	if e.Err == nil {
 		return e.Code
 	}
@@ -26,6 +34,10 @@ func (e *appError) Error() string {
 }
 
 func (e *appError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+
 	return e.Err
 }
 
@@ -37,6 +49,10 @@ func newAppError(code string, err error) error {
 }
 
 func classifyHIDError(err error) string {
+	if err == nil {
+		return errCodeHIDEnumeration
+	}
+
 	message := strings.ToLower(err.Error())
 
 	if strings.Contains(message, "permission denied") ||
