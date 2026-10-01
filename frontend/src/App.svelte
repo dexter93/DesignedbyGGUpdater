@@ -48,6 +48,8 @@
   let theme = $state('light')
   let iconTapCount = $state(0)
   let iconTapTimer = $state(null)
+  let logsCopied = $state(false)
+  let copyFeedbackTimer = $state(null)
 
   function handleIconTap() {
     iconTapCount++
@@ -129,6 +131,21 @@
     await navigator.clipboard.writeText(rules)
   }
 
+  async function copyLogs() {
+    try {
+      const text = logs.map(log => `[${log.timestamp}] ${log.message}`).join('\n')
+      await navigator.clipboard.writeText(text)
+
+      clearTimeout(copyFeedbackTimer)
+      logsCopied = true
+      copyFeedbackTimer = setTimeout(() => {
+        logsCopied = false
+        copyFeedbackTimer = null
+      }, 1000)
+    } catch (err) {
+      console.error('Failed to copy logs:', err)
+    }
+  }
   function getErrorCode(err) {
     const message = err?.message || ''
 
@@ -826,14 +843,20 @@
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-light text-xl text-base-content">{t.ConsoleOutput}</h3>
         {#if logs.length > 0}
-          <button class="btn btn-sm btn-ghost" onclick={() => {
-            const text = logs.map(l => `[${l.timestamp}] ${l.message}`).join('\n')
-            navigator.clipboard.writeText(text)
-          }}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 mr-1">
-              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-            </svg>
+          <button
+            class="btn btn-sm btn-ghost"
+            onclick={copyLogs}
+          >
+            {#if logsCopied}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 mr-1">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+            {:else}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 mr-1">
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+              </svg>
+            {/if}
             {t.Copy}
           </button>
         {/if}
